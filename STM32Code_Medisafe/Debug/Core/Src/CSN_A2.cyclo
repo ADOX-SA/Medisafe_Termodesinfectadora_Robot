@@ -1,0 +1,9 @@
+../Core/Src/CSN_A2.c:15:6:Inicializar_CSN_A2	1
+../Core/Src/CSN_A2.c:24:6:CSN_A2_write	1
+../Core/Src/CSN_A2.c:29:6:CSN_A2_write_buf	1
+../Core/Src/CSN_A2.c:34:6:CSN_A2_print	1
+../Core/Src/CSN_A2.c:39:6:Reset_Printer	1
+../Core/Src/CSN_A2.c:44:6:Formatear	1
+../Core/Src/CSN_A2.c:57:6:Imprimir_Texto	2
+../Core/Src/CSN_A2.c:69:6:Imprimir_Codigo	2
+../Core/Src/CSN_A2.c:98:6:Corte_Papel_Parcial	1

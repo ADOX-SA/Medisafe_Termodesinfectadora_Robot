@@ -1,0 +1,2 @@
+../Core/Src/SystemTicks.c:47:6:SystemTicks_Init	0	static
+../Core/Src/SystemTicks.c:77:6:SystemTicks_1ms	0	static

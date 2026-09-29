@@ -1,0 +1,4 @@
+../Core/Src/softserial.c:27:6:SoftUartTx_Begin	8	static
+../Core/Src/softserial.c:42:6:SoftUartTx_WriteByte	20	static,ignoring_inline_asm
+../Core/Src/softserial.c:68:6:SoftUartTx_WriteBuf	16	static
+../Core/Src/softserial.c:73:6:SoftUartTx_Print	16	static

@@ -1,0 +1,6 @@
+../Core/Src/UltrasonicGenerator.c:47:6:UltSon_Init	0	static
+../Core/Src/UltrasonicGenerator.c:54:6:UltSon_SendData	24	static
+../Core/Src/UltrasonicGenerator.c:75:6:UltSon_Encender	8	static
+../Core/Src/UltrasonicGenerator.c:86:6:UltSon_Apagar	8	static
+../Core/Src/UltrasonicGenerator.c:97:6:UltSon_ConfigTiempo	16	static
+../Core/Src/UltrasonicGenerator.c:121:6:UltSon_ConfigPotencia	16	static

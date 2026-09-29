@@ -1,0 +1,9 @@
+../Core/Src/relay_module.c:58:6:RS485_SetTxMode	0	static
+../Core/Src/relay_module.c:62:6:RS485_SetRxMode	0	static
+../Core/Src/relay_module.c:67:6:RelayModule_Init	8	static
+../Core/Src/relay_module.c:104:6:RelayModule_ReadAllInputs	40	static
+../Core/Src/relay_module.c:138:10:calcularCRC	12	static
+../Core/Src/relay_module.c:159:6:RelayModule_WriteOutput	0	static
+../Core/Src/relay_module.c:205:6:RelayModule_WriteAllOutputs	40	static
+../Core/Src/relay_module.c:246:6:RS485_Queue_Loop	8	static
+../Core/Src/relay_module.c:267:6:RS485_SaveInputStatus	12	static

@@ -1,0 +1,4 @@
+../Core/Src/softserial.c:27:6:SoftUartTx_Begin	1
+../Core/Src/softserial.c:42:6:SoftUartTx_WriteByte	7
+../Core/Src/softserial.c:68:6:SoftUartTx_WriteBuf	2
+../Core/Src/softserial.c:73:6:SoftUartTx_Print	1

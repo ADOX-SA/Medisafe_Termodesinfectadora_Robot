@@ -1,0 +1,3 @@
+../Core/Src/service.c:21:6:Service_Diagram	87
+../Core/Src/service.c:279:6:Service_Buttons	23
+../Core/Src/service.c:400:6:Service_SendStateSubstate	67

@@ -1,0 +1,3 @@
+../Core/Src/rfid_wiegand.c:27:6:Rfid_Wiegand_Init	1
+../Core/Src/rfid_wiegand.c:38:6:Rfid_Wiegand_Loop	5
+../Core/Src/rfid_wiegand.c:88:6:Rfid_Wiegand_Callback	5

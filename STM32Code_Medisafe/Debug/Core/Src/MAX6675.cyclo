@@ -1,0 +1,2 @@
+../Core/Src/MAX6675.c:37:6:MAX6675_TC_Init	1
+../Core/Src/MAX6675.c:51:6:MAX6675_TC_Service	4

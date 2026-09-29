@@ -1,0 +1,7 @@
+../Core/Src/i2c_pressure.c:37:19:WriteOneByte	1
+../Core/Src/i2c_pressure.c:43:19:ReadOneByte	1
+../Core/Src/i2c_pressure.c:49:9:ReadPressurePa	5
+../Core/Src/i2c_pressure.c:75:7:ReadTemperature	3
+../Core/Src/i2c_pressure.c:97:6:sensadoPresion	6
+../Core/Src/i2c_pressure.c:183:6:reset_estanqueidad	1
+../Core/Src/i2c_pressure.c:129:6:fsm_on_Estanqueidad	9
