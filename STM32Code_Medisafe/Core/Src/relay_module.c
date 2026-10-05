@@ -79,11 +79,7 @@ void RelayModule_Init(ENUM_REF_LAV_T ID)
 			rm_input1[i]=0;
 			rm_output1[i]=0;
 		}
-		//CMP14_OFF
-		//L1_VAL08 = 1;
-		//L1_VAL08_OFF //Para bloquear la valvula de 3 vias.
 
-		//RelayModule_WriteAllOutputs(1);
 		break;
 
 	case REPRO2:
@@ -92,11 +88,7 @@ void RelayModule_Init(ENUM_REF_LAV_T ID)
 			rm_input2[i]=0;
 			rm_output2[i]=0;
 		}
-		CMP14_OFF
-		//L2_VAL08 = 1;
-		//L2_VAL08_OFF //Para bloquear la valvula de 3 vias.
 
-		//RelayModule_WriteAllOutputs(2);
 		break;
 	}
 }

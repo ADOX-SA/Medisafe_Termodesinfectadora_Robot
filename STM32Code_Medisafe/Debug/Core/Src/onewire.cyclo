@@ -15,5 +15,5 @@
 ../Core/Src/onewire.c:298:6:OneWire_Select	2
 ../Core/Src/onewire.c:312:6:OneWire_SelectWithPointer	1
 ../Core/Src/onewire.c:326:6:OneWire_GetFullROM	2
-../Core/Src/onewire.c:337:9:OneWire_CRC8	4
+../Core/Src/onewire.c:337:9:OneWire_CRC8	3
 ../Core/Src/onewire.c:361:6:OneWire_Init	1

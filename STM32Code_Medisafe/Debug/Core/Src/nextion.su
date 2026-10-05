@@ -34,12 +34,12 @@
 ../Core/Src/nextion.c:692:6:Nextion_Drain_Reset_ErrorTapa	0	static
 ../Core/Src/nextion.c:799:6:Nextion_FinDosing	0	static
 ../Core/Src/nextion.c:804:6:Nextion_Send_NivelBidon	8	static
-../Core/Src/nextion.c:857:6:Nextion_send_on_modo	120	static
+../Core/Src/nextion.c:857:6:Nextion_send_on_modo	112	static
 ../Core/Src/nextion.c:923:6:Nextion_send_on_estanq	72	static
 ../Core/Src/nextion.c:937:6:Nextion_send_on_temp	72	static
-../Core/Src/nextion.c:959:6:Service_SendPres	192	static
-../Core/Src/nextion.c:979:6:Service_SendTemp	200	static
-../Core/Src/nextion.c:1008:6:Nextion_send_on_presion	80	static
+../Core/Src/nextion.c:959:6:Service_SendPres	184	static
+../Core/Src/nextion.c:979:6:Service_SendTemp	184	static
+../Core/Src/nextion.c:1008:6:Nextion_send_on_presion	72	static
 ../Core/Src/nextion.c:1039:6:Nextion_RTC_Request	0	static
 ../Core/Src/nextion.c:1047:6:Nextion_Send_OPA_ON	160	static
 ../Core/Src/nextion.c:1065:6:Nextion_Send_OPA_OFF	160	static

@@ -207,7 +207,7 @@ int main(void)
 	Rfid_Wiegand_Init();
 	UltSon_Init();
 
-	EC2000_fsm_init();
+	//EC2000_fsm_init();
 
 	Inicializar_CSN_A2();
 	Ticket_InitAll();
@@ -228,7 +228,7 @@ int main(void)
 	while (1)
 	{
 
-		EC2000_fsm_runcycle();
+		//EC2000_fsm_runcycle();
 
 		if(!example_tic)
 		{
