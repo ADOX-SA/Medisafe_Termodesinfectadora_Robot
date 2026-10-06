@@ -9,11 +9,17 @@
 
 #include <stdint.h>
 
-/* Estados principales de la FSM. Se agregaran nuevos procesos sobre esta base. */
+/* Estados principales de la FSM Medisafe. */
 typedef enum
 {
-	Medsaf_FSM_IDLE = 0
-} Medsaf_FSM_STATES_T;
+	MEDSAF_INIT = 0,
+	MEDSAF_PRE_WASH,
+	MEDSAF_WASH,
+	MEDSAF_RINSE,
+	MEDSAF_FINAL_RINSE,
+	MEDSAF_COOLING,
+	MEDSAF_END
+} MEDSAF_FSM_STATES_T;
 
 /*
  * Nivel calculado de la bacha.
@@ -21,20 +27,23 @@ typedef enum
  */
 typedef enum
 {
-	Medsaf_BACHA_EMPTY = 0,
-	Medsaf_BACHA_LOW,
-	Medsaf_BACHA_MEDIUM,
-	Medsaf_BACHA_HIGH,
-	Medsaf_BACHA_FULL,
-	Medsaf_BACHA_NIVEL_ERROR
-} Medsaf_NIVEL_BACHA_T;
+	MEDSAF_BACHA_EMPTY = 0,
+	MEDSAF_BACHA_LOW,
+	MEDSAF_BACHA_MEDIUM,
+	MEDSAF_BACHA_HIGH,
+	MEDSAF_BACHA_FULL,
+	MEDSAF_BACHA_NIVEL_ERROR
+} MEDSAF_NIVEL_BACHA_T;
 
-extern uint8_t Medsaf_fsm_enable;
-extern uint8_t Medsaf_fsm_paused;
-extern Medsaf_NIVEL_BACHA_T Medsaf_nivel_bacha;
+extern uint8_t medsaf_fsm_enable;
+extern uint8_t medsaf_fsm_paused;
+extern uint8_t medsaf_error_puerta;
+extern MEDSAF_NIVEL_BACHA_T medsaf_nivel_bacha;
 
 void Medsaf_fsm_init(void);
+void Medsaf_fsm_runcycle(void);
 void Medsaf_actualizar_nivel_bacha(void);
-Medsaf_NIVEL_BACHA_T Medsaf_get_nivel_bacha(void);
+MEDSAF_NIVEL_BACHA_T Medsaf_get_nivel_bacha(void);
+MEDSAF_FSM_STATES_T Medsaf_fsm_get_state(void);
 
 #endif /* INC_MEDISAFE_H_ */

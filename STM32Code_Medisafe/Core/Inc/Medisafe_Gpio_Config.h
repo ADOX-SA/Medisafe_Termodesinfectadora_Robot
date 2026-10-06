@@ -42,6 +42,8 @@ void MEDSAF_fsm_off_drenar_bacha(void);
 #define MEDSAF_NIVEL_BACHA_ALTO RM1_IN3
 #define MEDSAF_NIVEL_BACHA_MAXIMO RM1_IN4
 
+#define MEDSAF_SENSOR_PUERTA RM1_IN5
+
 //------------------------------------------------------
 //------------------------------------------------------
 //-----> SALIDAS
