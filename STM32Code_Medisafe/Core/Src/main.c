@@ -42,6 +42,7 @@
 #include "ticket.h" // generacion de tickets L1
 #include "UltrasonicGenerator.h"
 #include "ENDOCLEAN2000.h"
+#include "Medisafe.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,7 +53,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"MEDISAFE BETA\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.1.7 MEDSAF\""
 
 /* USER CODE END PD */
 
@@ -208,6 +209,7 @@ int main(void)
 	UltSon_Init();
 
 	//EC2000_fsm_init();
+	/* Medisafe se inicia solamente al recibir L1_b_comenzar desde Nextion. */
 
 	Inicializar_CSN_A2();
 	Ticket_InitAll();
@@ -229,6 +231,7 @@ int main(void)
 	{
 
 		//EC2000_fsm_runcycle();
+		Medsaf_fsm_runcycle();
 
 		if(!example_tic)
 		{

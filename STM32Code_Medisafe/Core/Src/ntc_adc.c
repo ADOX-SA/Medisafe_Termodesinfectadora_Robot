@@ -51,6 +51,11 @@ uint16_t L1_ntc_adc_value; // Variable para uso externo.
 float L1_ntc_temperature;  // Variable para uso externo.
 uint16_t L1_adc_sample[SAMPLES_QUANTITY]={0};
 
+//---> Lavadora 2
+uint16_t L2_ntc_adc_value; // Variable para uso externo.
+float L2_ntc_temperature;  // Variable para uso externo.
+uint16_t L2_adc_sample[SAMPLES_QUANTITY]={0};
+
 float table_temps[DATA_LENGTH]={ 10.5, 12.3, 20.5, 24.9, 28.5, 31, 35, 40, 42.8, 46, 56, 61.5, 76.5 };
 uint16_t table_adc[DATA_LENGTH]= { 3800, 3700, 3150, 2950, 2780, 2650, 2430, 2200, 2060, 1940, 1560, 1390, 930 };
 
@@ -90,8 +95,8 @@ void NTC_ADC_Loop()
 		//-----<
 
 		static uint8_t sample_index=0; // Uso el mismo indice para los 2.
-		uint16_t L1_adc_new_sample;
-		uint32_t L1_acumulador = 0;
+		uint16_t L1_adc_new_sample, L2_adc_new_sample;
+		uint32_t L1_acumulador = 0, L2_acumulador = 0;
 
 		//------> LECTURA ADC 1
 		HAL_ADC_Start(&hadc1);
@@ -100,7 +105,15 @@ void NTC_ADC_Loop()
 		HAL_ADC_Stop(&hadc1);
 		//------<
 
+		//------> LECTURA ADC 2
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, 10);
+		L2_adc_new_sample = (uint16_t)HAL_ADC_GetValue(&hadc2);
+		HAL_ADC_Stop(&hadc2);
+		//------<
+
 		L1_adc_sample[sample_index] = L1_adc_new_sample;
+		L2_adc_sample[sample_index] = L2_adc_new_sample;
 		sample_index++;
 
 		if(sample_index >= SAMPLES_QUANTITY)
@@ -109,9 +122,11 @@ void NTC_ADC_Loop()
 		for(uint8_t i = 0; i < SAMPLES_QUANTITY; i++)
 		{
 			L1_acumulador += L1_adc_sample[i];
+			L2_acumulador += L2_adc_sample[i];
 		}
 
 		L1_ntc_adc_value = (uint16_t)(L1_acumulador / SAMPLES_QUANTITY);
+		L2_ntc_adc_value = (uint16_t)(L2_acumulador / SAMPLES_QUANTITY);
 
 		//---------------------------------------------
 		//------> CALCULO DE TEMPERATURA
@@ -126,6 +141,13 @@ void NTC_ADC_Loop()
 		}
 		L1_ntc_temperature = table_temps[table_index];
 
+		table_index=0;
+		while((table_index < (DATA_LENGTH-1)) && (L2_ntc_adc_value < table_adc[table_index]))
+		{
+			table_index++;
+		}
+		L2_ntc_temperature = table_temps[table_index];
+
 		//------> Copio a los valores que usa la maquina de estado.
 		//L1_realTempW=L1_ntc_temperature;
 		//L1_realTempD=L1_ntc_temperature;
@@ -133,5 +155,6 @@ void NTC_ADC_Loop()
 		//L2_realTempD=L2_ntc_temperature;
 
 		L1_realTemp=NTC_ADC_CalculateTemp(L1_ntc_adc_value);
+		L2_realTemp=NTC_ADC_CalculateTemp(L2_ntc_adc_value);
 	}
 }

@@ -16,6 +16,7 @@
 #include "UltrasonicGenerator.h"
 #include "ticket.h"
 #include "ENDOCLEAN2000.h"
+#include "Medisafe.h"
 #define TX_TIMER 100
 
 extern UART_HandleTypeDef huart1;
@@ -83,6 +84,48 @@ uint8_t ExtraerString(const uint8_t * _received_data,const char * _tag, char * _
 }
 
 void Nextion_commands(const uint8_t *);
+
+static void Medsaf_nextion_iniciar_programa(void)
+{
+	char medsaf_buffer[50];
+
+	Medsaf_fsm_init();
+	enqueue_nextion_command("page Main");
+	if (!medsaf_fsm_enable)
+		return;
+
+	enqueue_nextion_command("data.L1_mensaje.txt=\"\"");
+	Nextion_ChangeState(REPRO1, Lavando_NextionState);
+	Nextion_SetButton_vis(REPRO1, Boton1_NextionButtons, Ocultar_NextionButtons);
+	Nextion_SetButton_vis(REPRO1, Boton2_NextionButtons, Mostrar_NextionButtons);
+	snprintf(medsaf_buffer, sizeof(medsaf_buffer),
+			 "data.L1_on_modo.txt=\"P%d %s\"",
+			 (int)medsaf_programa,
+			 (medsaf_modo == MEDSAF_MODO_ROBOT) ? "Robot" : "Estandar");
+	enqueue_nextion_command(medsaf_buffer);
+}
+
+static uint8_t Medsaf_nextion_parse_start(const uint8_t *medsaf_received_data)
+{
+	const char *medsaf_comando = (const char *)medsaf_received_data;
+
+	/* Formato exacto esperado: start:p1_std ... start:p6_rbt. */
+	if ((strlen(medsaf_comando) != 12) ||
+		(strncmp(medsaf_comando, "start:p", 7) != 0) ||
+		(medsaf_comando[7] < '1') || (medsaf_comando[7] > '6') ||
+		(medsaf_comando[8] != '_'))
+		return 0;
+
+	if (strcmp(&medsaf_comando[9], "std") == 0)
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	else if (strcmp(&medsaf_comando[9], "rbt") == 0)
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	else
+		return 0;
+
+	medsaf_programa = (MEDSAF_PROGRAMA_T)(medsaf_comando[7] - '0');
+	return 1;
+}
 
 /**
  * Variables utilizadas:
@@ -414,24 +457,34 @@ void Nextion_commands(const uint8_t *_received_data)
 		//----> CODIGO PARA ABRIR PUERTA
 		L1_Open_Door();
 	}*/
+	else if(strncmp((char *)_received_data, "start:", 6)==0)
+	{
+		if (Medsaf_nextion_parse_start(_received_data))
+			Medsaf_nextion_iniciar_programa();
+		else
+			enqueue_nextion_command("data.L1_mensaje.txt=\"Programa invalido\"");
+	}
 	else if((strcmp((char *)_received_data,"L1_b_comenzar"))==0)
 	{
-		EC2000_fsm_init();
-		EC2000_LAVADO_INIT;
-		enqueue_nextion_command("page EC2000_Main");
-		Nextion_ChangeState(REPRO1, Lavando_NextionState);
-		enqueue_nextion_command("data.L1_on_modo.txt=\"Lavado\"");
+		Medsaf_nextion_iniciar_programa();
 	}
 	else if((strcmp((char *)_received_data,"L1_b_pausar"))==0)
 	{
 		//----> PAUSAR: 1- pausar fsm. 2- apagar todos los relés.
-		EC2000_fsm_pause();
+		Medsaf_fsm_pause();
+		if (medsaf_fsm_paused)
+			Nextion_ChangeState(REPRO1, Pausado_NextionState);
 	}
 	else if(((strcmp((char *)_received_data,"L1_b_continuar"))==0)||
 			((strcmp((char *)_received_data,"L1_b_reanudar"))==0))
 	{
 		//---> Si esta la fsm pausada, la reactivo:
-		EC2000_fsm_continue();
+		Medsaf_fsm_continue();
+		if (medsaf_fsm_enable)
+		{
+			enqueue_nextion_command("data.L1_mensaje.txt=\"\"");
+			Nextion_ChangeState(REPRO1, Lavando_NextionState);
+		}
 	}
 	else if((strcmp((char *)_received_data,"L1_b_error_continuar"))==0)
 	{
@@ -444,7 +497,7 @@ void Nextion_commands(const uint8_t *_received_data)
 	}
 	else if((strcmp((char *)_received_data,"L1_b_finalizar"))==0)
 	{
-		EC2000_fsm_finish();
+		Medsaf_fsm_finish();
 	}
 	else if((strcmp((char *)_received_data,"L1_sensor_temp_enable"))==0)
 	{
@@ -950,6 +1003,12 @@ void Nextion_send_on_temp(uint8_t _lav)
 
 		break;
 	case REPRO2:
+		sprintf(float_str,"%d",(int)L2_realTemp);
+		strcpy(buffer,"data.L2_on_temp.txt=\"");
+		strcat(buffer,float_str);
+		strcat(buffer,"\"");
+		enqueue_nextion_command(buffer);
+
 		break;
 	default:
 		break;
@@ -1237,7 +1296,7 @@ void Service_SendMonitorGPIO()
 //-------------------------------------------------------------------------
 void Nextion_Demo()
 {
-	EC2000_sendstate_runcycle();
+	Medsaf_sendstate_runcycle();
 
 	//---> Timer 1 segundo
 	if(!nextion_tic_1seg)
@@ -1252,6 +1311,7 @@ void Nextion_Demo()
 		nextion_tic_2seg=2000;
 		/*-----------------------*/
 		Nextion_send_on_temp(REPRO1);
+		Nextion_send_on_temp(REPRO2);
 		Nextion_send_on_presion(REPRO1);
 		Service_SendMonitorGPIO();
 	}
@@ -1262,7 +1322,7 @@ void Nextion_Demo()
 		/*-----------------------*/
 		Nextion_send_on_estanq(REPRO1);
 		EC2000_Nextion_Send_NivelBidon();
-		EC2000_Nextion_Send_NivelBacha();
+		Medsaf_Nextion_Send_NivelBacha();
 	}
 	//---> Timer 4 segundo
 	if(!nextion_tic_4seg)

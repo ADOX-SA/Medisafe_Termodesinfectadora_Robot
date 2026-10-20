@@ -88,6 +88,7 @@ extern bool L1_enable_wh, L1_enable_dh;
 
 extern float L1_initialTemp;
 extern float L1_realTemp;
+extern float L2_realTemp;
 extern float L1_MaxTempW;
 extern float L1_MaxTempD;
 

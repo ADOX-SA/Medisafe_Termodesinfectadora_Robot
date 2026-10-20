@@ -14,6 +14,7 @@
 
 #include "SystemTicks.h"
 #include "ENDOCLEAN2000.h"
+#include "Medisafe.h"
 
 uint16_t example_tic;
 bool example_tic_en;
@@ -75,6 +76,57 @@ void SystemTicks_Init(){
 }
 
 void SystemTicks_1ms(){
+
+	if (medsaf_pre_wash_tic > 0)
+		medsaf_pre_wash_tic--;
+
+	if (medsaf_tapa_tic > 0)
+		medsaf_tapa_tic--;
+
+	if (medsaf_drenaje_extra_tic > 0)
+		medsaf_drenaje_extra_tic--;
+
+	if (medsaf_sendstate_tic > 0)
+		medsaf_sendstate_tic--;
+
+	if (medsaf_llenado_timeout_tic > 0)
+		medsaf_llenado_timeout_tic--;
+
+	if (medsaf_drenaje_timeout_tic > 0)
+		medsaf_drenaje_timeout_tic--;
+
+	if (medsaf_detergente_tic > 0)
+		medsaf_detergente_tic--;
+
+	if (medsaf_wash_tic > 0)
+		medsaf_wash_tic--;
+
+	if (medsaf_ultrasonido_total_tic > 0)
+		medsaf_ultrasonido_total_tic--;
+
+	if (medsaf_ultrasonido_pulso_tic > 0)
+		medsaf_ultrasonido_pulso_tic--;
+
+	if (medsaf_calefaccion_timeout_tic > 0)
+		medsaf_calefaccion_timeout_tic--;
+
+	if (medsaf_calefactor_control_tic > 0)
+		medsaf_calefactor_control_tic--;
+
+	if (medsaf_calefactor_muestra_tic > 0)
+		medsaf_calefactor_muestra_tic--;
+
+	if (medsaf_rinse_tic > 0)
+		medsaf_rinse_tic--;
+
+	if (medsaf_final_rinse_tic > 0)
+		medsaf_final_rinse_tic--;
+
+	if (medsaf_cooling_tic > 0)
+		medsaf_cooling_tic--;
+
+	if (medsaf_buzzer_tic > 0)
+		medsaf_buzzer_tic--;
 
 	if (EC2000_lavado_tic > 0)
 		EC2000_lavado_tic--;

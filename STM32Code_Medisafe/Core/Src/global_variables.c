@@ -55,6 +55,8 @@ float L1_initialTemp = 0,
 	  L1_MaxTempW = 40,
 	  L1_MaxTempD = 40;
 
+float L2_realTemp = 0;
+
 int L1_vuelta = 0;
 int L1_prev_state = 0;
 
