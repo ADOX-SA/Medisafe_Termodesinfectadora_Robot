@@ -43,7 +43,7 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 
-#define DATA_LENGTH 13 //---> Cantidad de puntos de nuestra curva.
+#define DATA_LENGTH 18 //---> Cantidad de puntos de nuestra curva.
 #define SAMPLES_QUANTITY 10    //---> Cantidad de muestras para promediar
 
 //---> Lavadora 1
@@ -56,8 +56,13 @@ uint16_t L2_ntc_adc_value; // Variable para uso externo.
 float L2_ntc_temperature;  // Variable para uso externo.
 uint16_t L2_adc_sample[SAMPLES_QUANTITY]={0};
 
-float table_temps[DATA_LENGTH]={ 10.5, 12.3, 20.5, 24.9, 28.5, 31, 35, 40, 42.8, 46, 56, 61.5, 76.5 };
-uint16_t table_adc[DATA_LENGTH]= { 3800, 3700, 3150, 2950, 2780, 2650, 2430, 2200, 2060, 1940, 1560, 1390, 930 };
+/*
+ * Nota:
+ * Los valores correspondientes a 100ºC (ADC: 258) y 110ºC (ADC: 165) fueron calculados teoricamente.
+ * El resto de los valores fue obtenido tomando varias muestras y comparando con un sensor calibrado.
+ * */
+float table_temps[DATA_LENGTH]={ 10.5, 12.3, 20.5, 24.9, 28.5, 31, 35, 40, 42.8, 46, 56, 61.5, 76.5, 80, 83, 90, 100, 110};
+uint16_t table_adc[DATA_LENGTH]= { 3800, 3700, 3150, 2950, 2780, 2650, 2430, 2200, 2060, 1940, 1560, 1390, 930, 550, 505, 419, 258, 165};
 
 static float NTC_ADC_CalculateTemp(uint16_t _adc_received)
 {

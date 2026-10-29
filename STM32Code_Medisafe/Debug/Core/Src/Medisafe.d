@@ -30,7 +30,9 @@ Core/Src/Medisafe.o: ../Core/Src/Medisafe.c ../Core/Inc/Medisafe.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- ../Core/Inc/Medisafe_Gpio_Config.h
+ ../Core/Inc/Medisafe_Gpio_Config.h ../Core/Inc/nextion.h \
+ ../Core/Inc/global_variables.h ../Core/Inc/user_gpio.h \
+ ../Core/Inc/ticket.h
 ../Core/Inc/Medisafe.h:
 ../Core/Inc/relay_module.h:
 ../Core/Inc/global_variables.h:
@@ -65,3 +67,7 @@ Core/Src/Medisafe.o: ../Core/Src/Medisafe.c ../Core/Inc/Medisafe.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
 ../Core/Inc/Medisafe_Gpio_Config.h:
+../Core/Inc/nextion.h:
+../Core/Inc/global_variables.h:
+../Core/Inc/user_gpio.h:
+../Core/Inc/ticket.h:

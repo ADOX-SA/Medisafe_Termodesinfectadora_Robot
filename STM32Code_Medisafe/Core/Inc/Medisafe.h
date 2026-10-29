@@ -10,13 +10,15 @@
 #include <stdint.h>
 
 /* Duracion total del lavado durante PRE_WASH, en milisegundos. */
-#define MEDSAF_TIME_PRE_WASH 60000
+#define MEDSAF_TIME_PRE_WASH 30000
+#define MEDSAF_TEMP_PRE_WASH 35.0f
 
 /* Periodo de alternancia del solenoide de entrada de agua a la tapa. */
-#define MEDSAF_TIME_ALTERNAR_TAPA 15000
+#define MEDSAF_TIME_TAPA_SPRAY 10000
+#define MEDSAF_TIME_LUMEN_FLUSH 5000
 
 /* Drenaje adicional luego de detectar la bacha vacia. */
-#define MEDSAF_TIME_DRENAJE_EXTRA 20000
+#define MEDSAF_TIME_DRENAJE_EXTRA 30000
 
 /* Periodo de envio de estado y subestado a Nextion. */
 #define MEDSAF_TIME_SENDSTATE 1000
@@ -27,23 +29,31 @@
 
 /* Tiempos del proceso WASH, en milisegundos. */
 #define MEDSAF_TIME_DETERGENTE 10000
-#define MEDSAF_TIME_WASH 10000
-#define MEDSAF_TIME_ULTRASONIDO_TOTAL 60000
+#define MEDSAF_TEMP_WASH 40.0f
+#define MEDSAF_TIME_DEGAS 30000
+#define MEDSAF_TIME_WASH 30000
 #define MEDSAF_TIME_ULTRASONIDO_ON 10000
-#define MEDSAF_TIME_ULTRASONIDO_OFF 3000
+#define MEDSAF_TIME_ULTRASONIDO_OFF 5000
+#define MEDSAF_TIME_WASH_ULTRASONIDO 10000
+#define MEDSAF_TIME_WASH_LUMEN 5000
 
 /* Tiempos maximos de seguridad para movimientos de liquido. */
 #define MEDSAF_TIMEOUT_LLENADO 300000
 #define MEDSAF_TIMEOUT_DRENAJE 300000
 
 /* Tiempos y limites del proceso RINSE. */
-#define MEDSAF_TIME_RINSE 60000
-#define MEDSAF_TIME_ALTERNAR_TAPA_RINSE 10000
+#define MEDSAF_TEMP_RINSE 60.0f
+#define MEDSAF_TIME_RINSE 30000
 #define MEDSAF_TIMEOUT_CALEFACCION 600000
 #define MEDSAF_MARGEN_SOBRETEMPERATURA 5
 #define MEDSAF_TIME_MUESTRA_CALEFACTOR 1000
 #define MEDSAF_MUESTRAS_PROMEDIO_CALEFACTOR 5
 #define MEDSAF_DIFERENCIA_MAX_TERMOCUPLAS 5.0f
+#define MEDSAF_TEMP_CAMBIO_CONTROL_CALEFACTOR 70.0f
+#define MEDSAF_TIMEOUT_CALEFACTOR_BAJA_TEMP 240000
+#define MEDSAF_STEP_CALEFACTOR_BAJA_TEMP 1.0f
+#define MEDSAF_TIMEOUT_CALEFACTOR_ALTA_TEMP 360000
+#define MEDSAF_STEP_CALEFACTOR_ALTA_TEMP 0.5f
 
 /* Requisitos para comprobar que el calefactor aumenta la temperatura. */
 typedef struct
@@ -53,11 +63,20 @@ typedef struct
 } MEDSAF_CALEFACTOR_CONTROL_T;
 
 /* Duracion de la recirculacion durante FINAL_RINSE. */
-#define MEDSAF_TIME_FINAL_RINSE 60000
+#define MEDSAF_TIME_FINAL_RINSE 30000
+
+/* Parametros P6 usados temporalmente para probar DISINFECTION. */
+#define MEDSAF_TEMP_DISINFECTION_STD 90.0f
+#define MEDSAF_TEMP_DISINFECTION_RBT 91.0f
+#define MEDSAF_TIME_DISINFECTION_STD 30000
+#define MEDSAF_TIME_DISINFECTION_RBT 30000
+#define MEDSAF_TIMEOUT_DISINFECTION_HEATING 1800000
+#define MEDSAF_HISTERESIS_DISINFECTION 1.0f
 
 /* Tiempo de espera por ciclo y temperatura objetivo de enfriamiento. */
-#define MEDSAF_TIME_COOLING 60000
+#define MEDSAF_TIME_COOLING 30000
 #define MEDSAF_TEMP_COOLING 60
+#define MEDSAF_TIMEOUT_COOLING 600000
 
 /* Variante seleccionada para los parametros del programa P1...P6. */
 typedef enum
@@ -86,6 +105,7 @@ typedef enum
 	MEDSAF_WASH,
 	MEDSAF_RINSE,
 	MEDSAF_FINAL_RINSE,
+	MEDSAF_DISINFECTION,
 	MEDSAF_COOLING,
 	MEDSAF_FINALIZAR_MANUAL,
 	MEDSAF_END
@@ -114,6 +134,7 @@ typedef enum
 	MEDSAF_PRE_WASH_INICIO = 0,
 	MEDSAF_PRE_WASH_LLENAR_FRIA,
 	MEDSAF_PRE_WASH_COMPLETAR_LLENADO,
+	MEDSAF_PRE_WASH_CALENTANDO,
 	MEDSAF_PRE_WASH_LAVANDO,
 	MEDSAF_PRE_WASH_DRENAR,
 	MEDSAF_PRE_WASH_DRENAJE_EXTRA,
@@ -127,7 +148,10 @@ typedef enum
 	MEDSAF_WASH_LLENAR_MEDIUM,
 	MEDSAF_WASH_DOSIFICAR_DETERGENTE,
 	MEDSAF_WASH_COMPLETAR_LLENADO,
+	MEDSAF_WASH_CALENTANDO,
 	MEDSAF_WASH_LAVANDO,
+	MEDSAF_WASH_DEGAS_ON,
+	MEDSAF_WASH_DEGAS_OFF,
 	MEDSAF_WASH_ULTRASONIDO_ON,
 	MEDSAF_WASH_ULTRASONIDO_OFF,
 	MEDSAF_WASH_DRENAR,
@@ -159,6 +183,18 @@ typedef enum
 	MEDSAF_FINAL_RINSE_DRENAJE_EXTRA,
 	MEDSAF_FINAL_RINSE_FIN
 } MEDSAF_FINAL_RINSE_STATES_T;
+
+/* Subestados del proceso DISINFECTION. */
+typedef enum
+{
+	MEDSAF_DISINFECTION_INICIO = 0,
+	MEDSAF_DISINFECTION_LLENAR,
+	MEDSAF_DISINFECTION_CALENTANDO,
+	MEDSAF_DISINFECTION_RECIRCULANDO,
+	MEDSAF_DISINFECTION_DRENAR,
+	MEDSAF_DISINFECTION_DRENAJE_EXTRA,
+	MEDSAF_DISINFECTION_FIN
+} MEDSAF_DISINFECTION_STATES_T;
 
 /* Subestados del proceso COOLING. */
 typedef enum
@@ -211,6 +247,7 @@ extern uint32_t medsaf_llenado_timeout_tic;
 extern uint32_t medsaf_drenaje_timeout_tic;
 extern uint32_t medsaf_detergente_tic;
 extern uint32_t medsaf_wash_tic;
+extern uint32_t medsaf_degas_tic;
 extern uint32_t medsaf_ultrasonido_total_tic;
 extern uint32_t medsaf_ultrasonido_pulso_tic;
 extern uint32_t medsaf_calefaccion_timeout_tic;
@@ -218,7 +255,9 @@ extern uint32_t medsaf_calefactor_control_tic;
 extern uint32_t medsaf_calefactor_muestra_tic;
 extern uint32_t medsaf_rinse_tic;
 extern uint32_t medsaf_final_rinse_tic;
+extern uint32_t medsaf_disinfection_tic;
 extern uint32_t medsaf_cooling_tic;
+extern uint32_t medsaf_cooling_timeout_tic;
 extern uint32_t medsaf_buzzer_tic;
 
 void Medsaf_fsm_init(void);
@@ -234,6 +273,7 @@ MEDSAF_PRE_WASH_STATES_T Medsaf_fsm_get_pre_wash_state(void);
 MEDSAF_WASH_STATES_T Medsaf_fsm_get_wash_state(void);
 MEDSAF_RINSE_STATES_T Medsaf_fsm_get_rinse_state(void);
 MEDSAF_FINAL_RINSE_STATES_T Medsaf_fsm_get_final_rinse_state(void);
+MEDSAF_DISINFECTION_STATES_T Medsaf_fsm_get_disinfection_state(void);
 MEDSAF_COOLING_STATES_T Medsaf_fsm_get_cooling_state(void);
 void Medsaf_sendstate_runcycle(void);
 void Medsaf_Nextion_Send_NivelBacha(void);

@@ -1,7 +1,6 @@
 "./Core/Src/CSN_A2.o"
 "./Core/Src/ENDOCLEAN2000.o"
 "./Core/Src/MAX6675.o"
-"./Core/Src/MODEL_CONFIG.o"
 "./Core/Src/Medisafe.o"
 "./Core/Src/Medisafe_Gpio_Config.o"
 "./Core/Src/SystemTicks.o"

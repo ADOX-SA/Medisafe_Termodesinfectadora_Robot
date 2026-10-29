@@ -1064,6 +1064,28 @@ void Service_SendTemp()
 	/*------------------------*/
 }
 
+void Service_SendTemp_ADC()
+{
+	char buffer[150]="";
+	char float_str[20];
+
+	/*-----------------------*/
+	sprintf(float_str,"%d",(int)L1_ntc_adc_value);
+	strcpy(buffer,"data.aux_str1.txt=\"");
+	strcat(buffer,float_str);
+	strcat(buffer,"\"");
+	enqueue_nextion_command(buffer);
+	memset(buffer, 0, sizeof(buffer));
+	/*-----------------------*/
+	sprintf(float_str,"%d",(int)L2_ntc_adc_value);
+	strcpy(buffer,"data.aux_str2.txt=\"");
+	strcat(buffer,float_str);
+	strcat(buffer,"\"");
+	enqueue_nextion_command(buffer);
+	memset(buffer, 0, sizeof(buffer));
+}
+
+
 void Nextion_send_on_presion(uint8_t _lav)
 {
 	char buffer[50]="";
@@ -1329,6 +1351,7 @@ void Nextion_Demo()
 	{
 		nextion_tic_4seg=4000;
 		/*-----------------------*/
+		Service_SendTemp_ADC();
 	}
 	//---> Timer 5 segundo
 	if(!nextion_tic_5seg)

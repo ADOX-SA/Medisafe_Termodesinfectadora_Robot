@@ -53,7 +53,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"1.1.7 MEDSAF\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.26 MEDSAF\""
 
 /* USER CODE END PD */
 

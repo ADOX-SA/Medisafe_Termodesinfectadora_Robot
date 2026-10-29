@@ -41,8 +41,12 @@ void MEDSAF_fsm_off_drenar_bacha(void);
 #define MEDSAF_NIVEL_BACHA_MEDIO RM1_IN2
 #define MEDSAF_NIVEL_BACHA_ALTO RM1_IN3
 #define MEDSAF_NIVEL_BACHA_MAXIMO RM1_IN4
+#define MEDSAF_NIVEL_DETERGENTE RM1_IN5
+#define MEDSAF_LUBRICANTE RM1_IN6
 
-#define MEDSAF_SENSOR_PUERTA RM1_IN5
+//#define MEDSAF_SENSOR_PUERTA RM1_IN7
+#define MEDSAF_SENSOR_PUERTA 1 //SOLO PARA PRUEBA SIN PUERTA ABIERTA.
+
 
 //------------------------------------------------------
 //------------------------------------------------------

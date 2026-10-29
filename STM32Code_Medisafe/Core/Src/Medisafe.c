@@ -28,6 +28,7 @@ static MEDSAF_PRE_WASH_STATES_T medsaf_pre_wash_state;
 static MEDSAF_WASH_STATES_T medsaf_wash_state;
 static MEDSAF_RINSE_STATES_T medsaf_rinse_state;
 static MEDSAF_FINAL_RINSE_STATES_T medsaf_final_rinse_state;
+static MEDSAF_DISINFECTION_STATES_T medsaf_disinfection_state;
 static MEDSAF_COOLING_STATES_T medsaf_cooling_state;
 static MEDSAF_FINISH_STATES_T medsaf_finish_state;
 
@@ -55,6 +56,7 @@ uint32_t medsaf_llenado_timeout_tic;
 uint32_t medsaf_drenaje_timeout_tic;
 uint32_t medsaf_detergente_tic;
 uint32_t medsaf_wash_tic;
+uint32_t medsaf_degas_tic;
 uint32_t medsaf_ultrasonido_total_tic;
 uint32_t medsaf_ultrasonido_pulso_tic;
 uint32_t medsaf_calefaccion_timeout_tic;
@@ -62,7 +64,9 @@ uint32_t medsaf_calefactor_control_tic;
 uint32_t medsaf_calefactor_muestra_tic;
 uint32_t medsaf_rinse_tic;
 uint32_t medsaf_final_rinse_tic;
+uint32_t medsaf_disinfection_tic;
 uint32_t medsaf_cooling_tic;
+uint32_t medsaf_cooling_timeout_tic;
 uint32_t medsaf_buzzer_tic;
 
 static MEDSAF_BUZZER_STATES_T medsaf_buzzer_state;
@@ -77,6 +81,7 @@ static uint32_t medsaf_llenado_timeout_tic_pausa;
 static uint32_t medsaf_drenaje_timeout_tic_pausa;
 static uint32_t medsaf_detergente_tic_pausa;
 static uint32_t medsaf_wash_tic_pausa;
+static uint32_t medsaf_degas_tic_pausa;
 static uint32_t medsaf_ultrasonido_total_tic_pausa;
 static uint32_t medsaf_ultrasonido_pulso_tic_pausa;
 static uint32_t medsaf_calefaccion_timeout_tic_pausa;
@@ -84,15 +89,13 @@ static uint32_t medsaf_calefactor_control_tic_pausa;
 static uint32_t medsaf_calefactor_muestra_tic_pausa;
 static uint32_t medsaf_rinse_tic_pausa;
 static uint32_t medsaf_final_rinse_tic_pausa;
+static uint32_t medsaf_disinfection_tic_pausa;
 static uint32_t medsaf_cooling_tic_pausa;
+static uint32_t medsaf_cooling_timeout_tic_pausa;
 static uint8_t medsaf_ticket_activo;
 static char medsaf_ticket_proceso[16];
 
-static const MEDSAF_CALEFACTOR_CONTROL_T medsaf_calefactor_control =
-{
-	60000,
-	2.0f
-};
+static MEDSAF_CALEFACTOR_CONTROL_T medsaf_calefactor_control;
 
 typedef struct
 {
@@ -115,6 +118,7 @@ static void Medsaf_fsm_pre_wash_init(void);
 static void Medsaf_fsm_wash_init(void);
 static void Medsaf_fsm_rinse_init(void);
 static void Medsaf_fsm_final_rinse_init(void);
+static void Medsaf_fsm_disinfection_init(void);
 static void Medsaf_fsm_cooling_init(void);
 static void Medsaf_buzzer_fin_init(void);
 static void Medsaf_ticket_iniciar(void);
@@ -129,6 +133,20 @@ static void Medsaf_calefactor_monitor_stop(void)
 
 static void Medsaf_calefactor_monitor_init(void)
 {
+	float medsaf_temperatura_actual;
+
+	medsaf_temperatura_actual = (L1_realTemp + L2_realTemp) / 2.0f;
+	if (medsaf_temperatura_actual >= MEDSAF_TEMP_CAMBIO_CONTROL_CALEFACTOR)
+	{
+		medsaf_calefactor_control.timeout = MEDSAF_TIMEOUT_CALEFACTOR_ALTA_TEMP;
+		medsaf_calefactor_control.step_temperatura = MEDSAF_STEP_CALEFACTOR_ALTA_TEMP;
+	}
+	else
+	{
+		medsaf_calefactor_control.timeout = MEDSAF_TIMEOUT_CALEFACTOR_BAJA_TEMP;
+		medsaf_calefactor_control.step_temperatura = MEDSAF_STEP_CALEFACTOR_BAJA_TEMP;
+	}
+
 	medsaf_calefactor_monitor.temperatura_inicial_acumulada = 0.0f;
 	medsaf_calefactor_monitor.temperatura_final_acumulada = 0.0f;
 	medsaf_calefactor_monitor.muestras_iniciales = 0;
@@ -344,6 +362,7 @@ static void Medsaf_fsm_prepare_tank_runcycle(void)
 	{
 	case MEDSAF_PREPARE_TANK_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
 		if (medsaf_nivel_bacha == MEDSAF_BACHA_EMPTY)
 		{
 			medsaf_prepare_tank_state = MEDSAF_PREPARE_TANK_FIN;
@@ -458,17 +477,11 @@ static uint8_t Medsaf_control_puerta(void)
 {
 	if (!MEDSAF_SENSOR_PUERTA)
 	{
-		MEDSAF_fsm_off_sistema();
 		if (!medsaf_error_puerta)
 		{
-			Medsaf_buzzer_error_init();
-			Medsaf_ticket_error("PUERTA ABIERTA");
-			Nextion_Error(REPRO1, "Puerta abierta");
-			Nextion_ChangeState(REPRO1, Error_NextionState);
-			Nextion_SetButton_vis(REPRO1, Boton2_NextionButtons, Mostrar_NextionButtons);
+			medsaf_error_puerta = 1;
+			Medsaf_detener_por_error("Puerta abierta");
 		}
-		medsaf_error_puerta = 1;
-		medsaf_fsm_enable = 0;
 		return 0;
 	}
 
@@ -479,17 +492,11 @@ static uint8_t Medsaf_control_nivel_maximo(void)
 {
 	if (MEDSAF_NIVEL_BACHA_MAXIMO)
 	{
-		MEDSAF_fsm_off_sistema();
 		if (!medsaf_error_nivel_maximo)
 		{
-			Medsaf_buzzer_error_init();
-			Medsaf_ticket_error("SENSOR NIVEL MAXIMO");
-			Nextion_Error(REPRO1, "Sensor nivel MAXIMO");
-			Nextion_ChangeState(REPRO1, Error_NextionState);
-			Nextion_SetButton_vis(REPRO1, Boton2_NextionButtons, Mostrar_NextionButtons);
+			medsaf_error_nivel_maximo = 1;
+			Medsaf_detener_por_error("Sensor nivel MAXIMO");
 		}
-		medsaf_error_nivel_maximo = 1;
-		medsaf_fsm_enable = 0;
 		return 0;
 	}
 
@@ -545,9 +552,10 @@ static uint8_t Medsaf_control_timeout_drenaje(void)
 	return 0;
 }
 
-static uint8_t Medsaf_control_calefaccion(void)
+static uint8_t Medsaf_control_calefaccion(float medsaf_temperatura_objetivo)
 {
-	if (L1_realTemp > (L1_TEMP_WASHING_MAX + MEDSAF_MARGEN_SOBRETEMPERATURA))
+	if ((L1_realTemp > (medsaf_temperatura_objetivo + MEDSAF_MARGEN_SOBRETEMPERATURA)) ||
+		(L2_realTemp > (medsaf_temperatura_objetivo + MEDSAF_MARGEN_SOBRETEMPERATURA)))
 	{
 		if (!medsaf_error_sobretemperatura)
 			Medsaf_detener_por_error("Sobretemperatura bacha");
@@ -571,6 +579,23 @@ static uint8_t Medsaf_control_calefaccion(void)
 	return 1;
 }
 
+static void Medsaf_alternar_tapa_runcycle(void)
+{
+	if (medsaf_tapa_tic)
+		return;
+
+	if (MEDSAF_SOLIN_TAPA)
+	{
+		MEDSAF_SOLIN_TAPA_OFF
+		medsaf_tapa_tic = MEDSAF_TIME_LUMEN_FLUSH;
+	}
+	else
+	{
+		MEDSAF_SOLIN_TAPA_ON
+		medsaf_tapa_tic = MEDSAF_TIME_TAPA_SPRAY;
+	}
+}
+
 static void Medsaf_fsm_pre_wash_init(void)
 {
 	medsaf_pre_wash_state = MEDSAF_PRE_WASH_INICIO;
@@ -579,6 +604,8 @@ static void Medsaf_fsm_pre_wash_init(void)
 	medsaf_drenaje_extra_tic = 0;
 	medsaf_llenado_timeout_tic = 0;
 	medsaf_drenaje_timeout_tic = 0;
+	medsaf_calefaccion_timeout_tic = 0;
+	Medsaf_calefactor_monitor_stop();
 }
 
 static void Medsaf_fsm_pre_wash_runcycle(void)
@@ -587,49 +614,62 @@ static void Medsaf_fsm_pre_wash_runcycle(void)
 	{
 	case MEDSAF_PRE_WASH_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_cold_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_pre_wash_state = MEDSAF_PRE_WASH_LLENAR_FRIA;
 		break;
 
 	case MEDSAF_PRE_WASH_LLENAR_FRIA:
-		if ((medsaf_nivel_bacha == MEDSAF_BACHA_LOW) ||
-			(medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
+		if ((medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
 			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
 		{
+			MEDSAF_fsm_off_llenar_bacha();
 			MEDSAF_fsm_on_lavado_bomba();
-			MEDSAF_SOLIN_TAPA_ON
-			medsaf_tapa_tic = MEDSAF_TIME_ALTERNAR_TAPA;
-			medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
-			medsaf_pre_wash_state = MEDSAF_PRE_WASH_COMPLETAR_LLENADO;
+			MEDSAF_SOLIN_TAPA_OFF
+			medsaf_tapa_tic = 0;
+			medsaf_llenado_timeout_tic = 0;
+
+			if (((L1_realTemp + L2_realTemp) / 2.0f) < MEDSAF_TEMP_PRE_WASH)
+			{
+				MEDSAF_fsm_on_calefactor();
+				Medsaf_calefactor_monitor_init();
+				medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_CALEFACCION;
+				medsaf_pre_wash_state = MEDSAF_PRE_WASH_CALENTANDO;
+			}
+			else
+			{
+				MEDSAF_SOLIN_TAPA_ON
+				medsaf_tapa_tic = MEDSAF_TIME_TAPA_SPRAY;
+				medsaf_pre_wash_tic = MEDSAF_TIME_PRE_WASH;
+				medsaf_pre_wash_state = MEDSAF_PRE_WASH_LAVANDO;
+			}
 		}
 		else
 			Medsaf_control_timeout_llenado();
 		break;
 
 	case MEDSAF_PRE_WASH_COMPLETAR_LLENADO:
-		if (medsaf_nivel_bacha == MEDSAF_BACHA_HIGH)
+		/* Conservado por compatibilidad; el llenado actual termina en MEDIUM. */
+		medsaf_pre_wash_state = MEDSAF_PRE_WASH_CALENTANDO;
+		break;
+
+	case MEDSAF_PRE_WASH_CALENTANDO:
+		if (((L1_realTemp + L2_realTemp) / 2.0f) >= MEDSAF_TEMP_PRE_WASH)
 		{
-			MEDSAF_fsm_off_llenar_bacha();
+			MEDSAF_fsm_off_calefactor();
+			Medsaf_calefactor_monitor_stop();
+			MEDSAF_SOLIN_TAPA_ON
+			medsaf_tapa_tic = MEDSAF_TIME_TAPA_SPRAY;
 			medsaf_pre_wash_tic = MEDSAF_TIME_PRE_WASH;
-			medsaf_llenado_timeout_tic = 0;
+			medsaf_calefaccion_timeout_tic = 0;
 			medsaf_pre_wash_state = MEDSAF_PRE_WASH_LAVANDO;
 		}
-		else if (!medsaf_tapa_tic)
-		{
-			if (MEDSAF_SOLIN_TAPA)
-			{
-				MEDSAF_SOLIN_TAPA_OFF
-			}
-			else
-			{
-				MEDSAF_SOLIN_TAPA_ON
-			}
-
-			medsaf_tapa_tic = MEDSAF_TIME_ALTERNAR_TAPA;
-		}
 		else
-			Medsaf_control_timeout_llenado();
+		{
+			if (!Medsaf_control_calefaccion(MEDSAF_TEMP_PRE_WASH))
+				break;
+		}
 		break;
 
 	case MEDSAF_PRE_WASH_LAVANDO:
@@ -641,19 +681,8 @@ static void Medsaf_fsm_pre_wash_runcycle(void)
 			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
 			medsaf_pre_wash_state = MEDSAF_PRE_WASH_DRENAR;
 		}
-		else if (!medsaf_tapa_tic)
-		{
-			if (MEDSAF_SOLIN_TAPA)
-			{
-				MEDSAF_SOLIN_TAPA_OFF
-			}
-			else
-			{
-				MEDSAF_SOLIN_TAPA_ON
-			}
-
-			medsaf_tapa_tic = MEDSAF_TIME_ALTERNAR_TAPA;
-		}
+		else
+			Medsaf_alternar_tapa_runcycle();
 		break;
 
 	case MEDSAF_PRE_WASH_DRENAR:
@@ -681,8 +710,7 @@ static void Medsaf_fsm_pre_wash_runcycle(void)
 		break;
 
 	default:
-		MEDSAF_fsm_off_sistema();
-		medsaf_fsm_enable = 0;
+		Medsaf_detener_por_error("Estado PRE_WASH invalido");
 		break;
 	}
 }
@@ -694,8 +722,11 @@ static void Medsaf_fsm_wash_init(void)
 	medsaf_drenaje_timeout_tic = 0;
 	medsaf_detergente_tic = 0;
 	medsaf_wash_tic = 0;
+	medsaf_degas_tic = 0;
 	medsaf_ultrasonido_total_tic = 0;
 	medsaf_ultrasonido_pulso_tic = 0;
+	medsaf_calefaccion_timeout_tic = 0;
+	Medsaf_calefactor_monitor_stop();
 	medsaf_drenaje_extra_tic = 0;
 }
 
@@ -705,18 +736,19 @@ static void Medsaf_fsm_wash_runcycle(void)
 	{
 	case MEDSAF_WASH_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_fsm_on_cold_water();
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_wash_state = MEDSAF_WASH_LLENAR_MEDIUM;
 		break;
 
 	case MEDSAF_WASH_LLENAR_MEDIUM:
-		if ((medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
+		if ((medsaf_nivel_bacha == MEDSAF_BACHA_LOW) ||
+			(medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
 			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
 		{
-			MEDSAF_fsm_off_llenar_bacha();
 			MEDSAF_fsm_on_detergente();
-			medsaf_llenado_timeout_tic = 0;
 			medsaf_detergente_tic = MEDSAF_TIME_DETERGENTE;
 			medsaf_wash_state = MEDSAF_WASH_DOSIFICAR_DETERGENTE;
 		}
@@ -728,10 +760,10 @@ static void Medsaf_fsm_wash_runcycle(void)
 		if (!medsaf_detergente_tic)
 		{
 			MEDSAF_fsm_off_detergente();
-			MEDSAF_fsm_on_hot_water();
-			medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 			medsaf_wash_state = MEDSAF_WASH_COMPLETAR_LLENADO;
 		}
+		else
+			Medsaf_control_timeout_llenado();
 		break;
 
 	case MEDSAF_WASH_COMPLETAR_LLENADO:
@@ -739,45 +771,84 @@ static void Medsaf_fsm_wash_runcycle(void)
 		{
 			MEDSAF_fsm_off_llenar_bacha();
 			MEDSAF_fsm_on_lavado_bomba();
-			MEDSAF_SOLIN_TAPA_ON
+			MEDSAF_SOLIN_TAPA_OFF
 			medsaf_llenado_timeout_tic = 0;
-			medsaf_wash_tic = MEDSAF_TIME_WASH;
-			medsaf_wash_state = MEDSAF_WASH_LAVANDO;
+			medsaf_tapa_tic = 0;
+
+			if (((L1_realTemp + L2_realTemp) / 2.0f) < MEDSAF_TEMP_WASH)
+			{
+				MEDSAF_fsm_on_calefactor();
+				Medsaf_calefactor_monitor_init();
+				medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_CALEFACCION;
+				medsaf_wash_state = MEDSAF_WASH_CALENTANDO;
+			}
+			else
+				medsaf_wash_state = MEDSAF_WASH_LAVANDO;
 		}
 		else
 			Medsaf_control_timeout_llenado();
 		break;
 
-	case MEDSAF_WASH_LAVANDO:
-		if (!medsaf_wash_tic)
+	case MEDSAF_WASH_CALENTANDO:
+		if (((L1_realTemp + L2_realTemp) / 2.0f) >= MEDSAF_TEMP_WASH)
 		{
-			MEDSAF_fsm_on_ultrasonido();
-			medsaf_ultrasonido_total_tic = MEDSAF_TIME_ULTRASONIDO_TOTAL;
-			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_ULTRASONIDO_ON;
-			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_ON;
+			MEDSAF_fsm_off_calefactor();
+			Medsaf_calefactor_monitor_stop();
+			medsaf_calefaccion_timeout_tic = 0;
+			medsaf_wash_state = MEDSAF_WASH_LAVANDO;
+		}
+		else
+		{
+			if (!Medsaf_control_calefaccion(MEDSAF_TEMP_WASH))
+				break;
 		}
 		break;
 
-	case MEDSAF_WASH_ULTRASONIDO_ON:
-		if (!medsaf_ultrasonido_total_tic)
+	case MEDSAF_WASH_LAVANDO:
+		/* Degas sin recirculacion, tal como indica el manual. */
+		MEDSAF_fsm_off_lavado_bomba();
+		MEDSAF_SOLIN_TAPA_OFF
+		MEDSAF_fsm_on_ultrasonido();
+		medsaf_degas_tic = MEDSAF_TIME_DEGAS;
+		medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_ULTRASONIDO_ON;
+		medsaf_wash_state = MEDSAF_WASH_DEGAS_ON;
+		break;
+
+	case MEDSAF_WASH_DEGAS_ON:
+		if (!medsaf_degas_tic)
 		{
 			MEDSAF_fsm_off_ultrasonido();
-			MEDSAF_fsm_off_lavado_bomba();
-			MEDSAF_SOLIN_TAPA_OFF
-			MEDSAF_fsm_on_drenar_bacha();
-			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
-			medsaf_wash_state = MEDSAF_WASH_DRENAR;
+			medsaf_wash_tic = MEDSAF_TIME_WASH;
+			MEDSAF_fsm_on_ultrasonido();
+			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_WASH_ULTRASONIDO;
+			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_ON;
 		}
 		else if (!medsaf_ultrasonido_pulso_tic)
 		{
 			MEDSAF_fsm_off_ultrasonido();
 			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_ULTRASONIDO_OFF;
-			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_OFF;
+			medsaf_wash_state = MEDSAF_WASH_DEGAS_OFF;
 		}
 		break;
 
-	case MEDSAF_WASH_ULTRASONIDO_OFF:
-		if (!medsaf_ultrasonido_total_tic)
+	case MEDSAF_WASH_DEGAS_OFF:
+		if (!medsaf_degas_tic)
+		{
+			medsaf_wash_tic = MEDSAF_TIME_WASH;
+			MEDSAF_fsm_on_ultrasonido();
+			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_WASH_ULTRASONIDO;
+			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_ON;
+		}
+		else if (!medsaf_ultrasonido_pulso_tic)
+		{
+			MEDSAF_fsm_on_ultrasonido();
+			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_ULTRASONIDO_ON;
+			medsaf_wash_state = MEDSAF_WASH_DEGAS_ON;
+		}
+		break;
+
+	case MEDSAF_WASH_ULTRASONIDO_ON:
+		if (!medsaf_wash_tic)
 		{
 			MEDSAF_fsm_off_ultrasonido();
 			MEDSAF_fsm_off_lavado_bomba();
@@ -788,8 +859,29 @@ static void Medsaf_fsm_wash_runcycle(void)
 		}
 		else if (!medsaf_ultrasonido_pulso_tic)
 		{
+			MEDSAF_fsm_off_ultrasonido();
+			MEDSAF_fsm_on_lavado_bomba();
+			MEDSAF_SOLIN_TAPA_OFF
+			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_WASH_LUMEN;
+			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_OFF;
+		}
+		break;
+
+	case MEDSAF_WASH_ULTRASONIDO_OFF:
+		if (!medsaf_wash_tic)
+		{
+			MEDSAF_fsm_off_ultrasonido();
+			MEDSAF_fsm_off_lavado_bomba();
+			MEDSAF_SOLIN_TAPA_OFF
+			MEDSAF_fsm_on_drenar_bacha();
+			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
+			medsaf_wash_state = MEDSAF_WASH_DRENAR;
+		}
+		else if (!medsaf_ultrasonido_pulso_tic)
+		{
+			MEDSAF_fsm_off_lavado_bomba();
 			MEDSAF_fsm_on_ultrasonido();
-			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_ULTRASONIDO_ON;
+			medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_WASH_ULTRASONIDO;
 			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_ON;
 		}
 		break;
@@ -842,6 +934,7 @@ static void Medsaf_fsm_rinse_runcycle(void)
 	{
 	case MEDSAF_RINSE_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_rinse_state = MEDSAF_RINSE_LLENAR_MEDIUM;
@@ -851,44 +944,52 @@ static void Medsaf_fsm_rinse_runcycle(void)
 		if ((medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
 			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
 		{
-			MEDSAF_fsm_on_calefactor();
-			Medsaf_calefactor_monitor_init();
-			medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_CALEFACCION;
-			medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
-			medsaf_rinse_state = MEDSAF_RINSE_COMPLETAR_LLENADO;
+			MEDSAF_fsm_off_llenar_bacha();
+			MEDSAF_fsm_on_lavado_bomba();
+			MEDSAF_SOLIN_TAPA_OFF
+			medsaf_tapa_tic = 0;
+			medsaf_llenado_timeout_tic = 0;
+
+			if (((L1_realTemp + L2_realTemp) / 2.0f) < MEDSAF_TEMP_RINSE)
+			{
+				MEDSAF_fsm_on_calefactor();
+				Medsaf_calefactor_monitor_init();
+				medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_CALEFACCION;
+				medsaf_rinse_state = MEDSAF_RINSE_CALENTANDO;
+			}
+			else
+			{
+				MEDSAF_SOLIN_TAPA_ON
+				medsaf_tapa_tic = MEDSAF_TIME_TAPA_SPRAY;
+				medsaf_rinse_tic = MEDSAF_TIME_RINSE;
+				medsaf_rinse_state = MEDSAF_RINSE_LAVANDO;
+			}
 		}
 		else
 			Medsaf_control_timeout_llenado();
 		break;
 
 	case MEDSAF_RINSE_COMPLETAR_LLENADO:
-		if (!Medsaf_control_calefaccion())
-			break;
-
-		if (medsaf_nivel_bacha == MEDSAF_BACHA_HIGH)
-		{
-			MEDSAF_fsm_off_llenar_bacha();
-			medsaf_llenado_timeout_tic = 0;
-			medsaf_rinse_state = MEDSAF_RINSE_CALENTANDO;
-		}
-		else
-			Medsaf_control_timeout_llenado();
+		/* Conservado por compatibilidad; el llenado actual termina en MEDIUM. */
+		medsaf_rinse_state = MEDSAF_RINSE_CALENTANDO;
 		break;
 
 	case MEDSAF_RINSE_CALENTANDO:
-		if (L1_realTemp >= L1_TEMP_WASHING_MAX)
+		if (((L1_realTemp + L2_realTemp) / 2.0f) >= MEDSAF_TEMP_RINSE)
 		{
 			MEDSAF_fsm_off_calefactor();
 			Medsaf_calefactor_monitor_stop();
-			MEDSAF_fsm_on_lavado_bomba();
 			MEDSAF_SOLIN_TAPA_ON
+			medsaf_tapa_tic = MEDSAF_TIME_TAPA_SPRAY;
 			medsaf_calefaccion_timeout_tic = 0;
-			medsaf_tapa_tic = MEDSAF_TIME_ALTERNAR_TAPA_RINSE;
 			medsaf_rinse_tic = MEDSAF_TIME_RINSE;
 			medsaf_rinse_state = MEDSAF_RINSE_LAVANDO;
 		}
 		else
-			Medsaf_control_calefaccion();
+		{
+			if (!Medsaf_control_calefaccion(MEDSAF_TEMP_RINSE))
+				break;
+		}
 		break;
 
 	case MEDSAF_RINSE_LAVANDO:
@@ -900,19 +1001,8 @@ static void Medsaf_fsm_rinse_runcycle(void)
 			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
 			medsaf_rinse_state = MEDSAF_RINSE_DRENAR;
 		}
-		else if (!medsaf_tapa_tic)
-		{
-			if (MEDSAF_SOLIN_TAPA)
-			{
-				MEDSAF_SOLIN_TAPA_OFF
-			}
-			else
-			{
-				MEDSAF_SOLIN_TAPA_ON
-			}
-
-			medsaf_tapa_tic = MEDSAF_TIME_ALTERNAR_TAPA_RINSE;
-		}
+		else
+			Medsaf_alternar_tapa_runcycle();
 		break;
 
 	case MEDSAF_RINSE_DRENAR:
@@ -960,6 +1050,7 @@ static void Medsaf_fsm_final_rinse_runcycle(void)
 	{
 	case MEDSAF_FINAL_RINSE_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_final_rinse_state = MEDSAF_FINAL_RINSE_LLENAR_MEDIUM;
@@ -969,25 +1060,20 @@ static void Medsaf_fsm_final_rinse_runcycle(void)
 		if ((medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
 			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
 		{
+			MEDSAF_fsm_off_llenar_bacha();
 			MEDSAF_fsm_on_lavado_bomba();
 			MEDSAF_SOLIN_TAPA_ON
-			medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
-			medsaf_final_rinse_state = MEDSAF_FINAL_RINSE_COMPLETAR_LLENADO;
-		}
-		else
-			Medsaf_control_timeout_llenado();
-		break;
-
-	case MEDSAF_FINAL_RINSE_COMPLETAR_LLENADO:
-		if (medsaf_nivel_bacha == MEDSAF_BACHA_HIGH)
-		{
-			MEDSAF_fsm_off_llenar_bacha();
 			medsaf_llenado_timeout_tic = 0;
 			medsaf_final_rinse_tic = MEDSAF_TIME_FINAL_RINSE;
 			medsaf_final_rinse_state = MEDSAF_FINAL_RINSE_RECIRCULANDO;
 		}
 		else
 			Medsaf_control_timeout_llenado();
+		break;
+
+	case MEDSAF_FINAL_RINSE_COMPLETAR_LLENADO:
+		/* Conservado por compatibilidad; P1 trabaja al nivel minimo. */
+		medsaf_final_rinse_state = MEDSAF_FINAL_RINSE_RECIRCULANDO;
 		break;
 
 	case MEDSAF_FINAL_RINSE_RECIRCULANDO:
@@ -1021,8 +1107,8 @@ static void Medsaf_fsm_final_rinse_runcycle(void)
 		break;
 
 	case MEDSAF_FINAL_RINSE_FIN:
-		Medsaf_fsm_cooling_init();
-		Medsaf_cambiar_estado(MEDSAF_COOLING);
+		Medsaf_fsm_disinfection_init();
+		Medsaf_cambiar_estado(MEDSAF_DISINFECTION);
 		break;
 
 	default:
@@ -1031,10 +1117,151 @@ static void Medsaf_fsm_final_rinse_runcycle(void)
 	}
 }
 
+static void Medsaf_fsm_disinfection_init(void)
+{
+	medsaf_disinfection_state = MEDSAF_DISINFECTION_INICIO;
+	medsaf_disinfection_tic = 0;
+	medsaf_llenado_timeout_tic = 0;
+	medsaf_drenaje_timeout_tic = 0;
+	medsaf_drenaje_extra_tic = 0;
+	medsaf_calefaccion_timeout_tic = 0;
+	Medsaf_calefactor_monitor_stop();
+}
+
+static void Medsaf_fsm_disinfection_runcycle(void)
+{
+	float medsaf_temperatura;
+	float medsaf_temperatura_objetivo;
+	uint32_t medsaf_tiempo_desinfeccion;
+
+	medsaf_temperatura = (L1_realTemp + L2_realTemp) / 2.0f;
+	if (medsaf_modo == MEDSAF_MODO_ROBOT)
+	{
+		medsaf_temperatura_objetivo = MEDSAF_TEMP_DISINFECTION_RBT;
+		medsaf_tiempo_desinfeccion = MEDSAF_TIME_DISINFECTION_RBT;
+	}
+	else
+	{
+		medsaf_temperatura_objetivo = MEDSAF_TEMP_DISINFECTION_STD;
+		medsaf_tiempo_desinfeccion = MEDSAF_TIME_DISINFECTION_STD;
+	}
+
+	switch (medsaf_disinfection_state)
+	{
+	case MEDSAF_DISINFECTION_INICIO:
+		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_fsm_on_hot_water();
+		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
+		medsaf_disinfection_state = MEDSAF_DISINFECTION_LLENAR;
+		break;
+
+	case MEDSAF_DISINFECTION_LLENAR:
+		if ((medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
+			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
+		{
+			MEDSAF_fsm_off_llenar_bacha();
+			MEDSAF_fsm_on_lavado_bomba();
+			MEDSAF_SOLIN_TAPA_ON
+			MEDSAF_fsm_on_calefactor();
+			Medsaf_calefactor_monitor_init();
+			medsaf_llenado_timeout_tic = 0;
+			medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_DISINFECTION_HEATING;
+			medsaf_disinfection_state = MEDSAF_DISINFECTION_CALENTANDO;
+		}
+		else
+			Medsaf_control_timeout_llenado();
+		break;
+
+	case MEDSAF_DISINFECTION_CALENTANDO:
+		if (medsaf_temperatura >= medsaf_temperatura_objetivo)
+		{
+			MEDSAF_fsm_off_calefactor();
+			Medsaf_calefactor_monitor_stop();
+			medsaf_calefaccion_timeout_tic = 0;
+			medsaf_disinfection_tic = medsaf_tiempo_desinfeccion;
+			medsaf_disinfection_state = MEDSAF_DISINFECTION_RECIRCULANDO;
+		}
+		else if (!Medsaf_control_calefaccion(medsaf_temperatura_objetivo))
+			break;
+		break;
+
+	case MEDSAF_DISINFECTION_RECIRCULANDO:
+		if ((L1_realTemp > (medsaf_temperatura_objetivo + MEDSAF_MARGEN_SOBRETEMPERATURA)) ||
+			(L2_realTemp > (medsaf_temperatura_objetivo + MEDSAF_MARGEN_SOBRETEMPERATURA)))
+		{
+			medsaf_error_sobretemperatura = 1;
+			Medsaf_detener_por_error("Sobretemperatura desinfeccion");
+			break;
+		}
+
+		if (medsaf_temperatura <
+			(medsaf_temperatura_objetivo - MEDSAF_HISTERESIS_DISINFECTION))
+		{
+			if (!medsaf_calefactor_monitor.activo)
+			{
+				MEDSAF_fsm_on_calefactor();
+				Medsaf_calefactor_monitor_init();
+				medsaf_calefaccion_timeout_tic = MEDSAF_TIMEOUT_DISINFECTION_HEATING;
+			}
+
+			if (!Medsaf_control_calefaccion(medsaf_temperatura_objetivo))
+				break;
+		}
+		else if (!medsaf_disinfection_tic)
+		{
+			MEDSAF_fsm_off_calefactor();
+			Medsaf_calefactor_monitor_stop();
+			MEDSAF_fsm_off_lavado_bomba();
+			MEDSAF_SOLIN_TAPA_OFF
+			MEDSAF_fsm_on_drenar_bacha();
+			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
+			medsaf_disinfection_state = MEDSAF_DISINFECTION_DRENAR;
+		}
+		else
+		{
+			MEDSAF_fsm_off_calefactor();
+			Medsaf_calefactor_monitor_stop();
+			medsaf_calefaccion_timeout_tic = 0;
+		}
+		break;
+
+	case MEDSAF_DISINFECTION_DRENAR:
+		if (medsaf_nivel_bacha == MEDSAF_BACHA_EMPTY)
+		{
+			medsaf_drenaje_timeout_tic = 0;
+			medsaf_drenaje_extra_tic = MEDSAF_TIME_DRENAJE_EXTRA;
+			medsaf_disinfection_state = MEDSAF_DISINFECTION_DRENAJE_EXTRA;
+		}
+		else
+			Medsaf_control_timeout_drenaje();
+		break;
+
+	case MEDSAF_DISINFECTION_DRENAJE_EXTRA:
+		if (!medsaf_drenaje_extra_tic)
+		{
+			MEDSAF_fsm_off_drenar_bacha();
+			medsaf_disinfection_state = MEDSAF_DISINFECTION_FIN;
+		}
+		break;
+
+	case MEDSAF_DISINFECTION_FIN:
+		Medsaf_fsm_cooling_init();
+		medsaf_cooling_timeout_tic = MEDSAF_TIMEOUT_COOLING;
+		Medsaf_cambiar_estado(MEDSAF_COOLING);
+		break;
+
+	default:
+		Medsaf_detener_por_error("Estado DISINFECTION invalido");
+		break;
+	}
+}
+
 static void Medsaf_fsm_cooling_init(void)
 {
 	medsaf_cooling_state = MEDSAF_COOLING_INICIO;
 	medsaf_cooling_tic = 0;
+	medsaf_cooling_timeout_tic = 0;
 	medsaf_llenado_timeout_tic = 0;
 	medsaf_drenaje_timeout_tic = 0;
 	medsaf_drenaje_extra_tic = 0;
@@ -1046,6 +1273,7 @@ static void Medsaf_fsm_cooling_runcycle(void)
 	{
 	case MEDSAF_COOLING_INICIO:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_cold_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_cooling_state = MEDSAF_COOLING_LLENAR_MEDIUM;
@@ -1057,7 +1285,6 @@ static void Medsaf_fsm_cooling_runcycle(void)
 		{
 			MEDSAF_fsm_off_llenar_bacha();
 			medsaf_llenado_timeout_tic = 0;
-			medsaf_cooling_tic = MEDSAF_TIME_COOLING;
 			medsaf_cooling_state = MEDSAF_COOLING_ESPERANDO;
 		}
 		else
@@ -1065,22 +1292,20 @@ static void Medsaf_fsm_cooling_runcycle(void)
 		break;
 
 	case MEDSAF_COOLING_ESPERANDO:
-		if (!medsaf_cooling_tic)
+		if ((L1_realTemp <= 0.0f) || (L2_realTemp <= 0.0f))
 		{
-			if (!L1_realTemp)
-			{
-				medsaf_error_temperatura = 1;
-				Medsaf_detener_por_error("Falla sensor temperatura");
-				break;
-			}
-
-			MEDSAF_fsm_on_drenar_bacha();
-			medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
-			if (L1_realTemp <= MEDSAF_TEMP_COOLING)
-				medsaf_cooling_state = MEDSAF_COOLING_DRENAJE_FINAL;
-			else
-				medsaf_cooling_state = MEDSAF_COOLING_DRENAR;
+			medsaf_error_temperatura = 1;
+			Medsaf_detener_por_error("Falla sensor temperatura");
+			break;
 		}
+
+		MEDSAF_fsm_on_drenar_bacha();
+		medsaf_drenaje_timeout_tic = MEDSAF_TIMEOUT_DRENAJE;
+		if ((((L1_realTemp + L2_realTemp) / 2.0f) <= MEDSAF_TEMP_COOLING) ||
+			(!medsaf_cooling_timeout_tic))
+			medsaf_cooling_state = MEDSAF_COOLING_DRENAJE_FINAL;
+		else
+			medsaf_cooling_state = MEDSAF_COOLING_DRENAR;
 		break;
 
 	case MEDSAF_COOLING_DRENAR:
@@ -1114,6 +1339,7 @@ static void Medsaf_fsm_cooling_runcycle(void)
 		break;
 
 	case MEDSAF_COOLING_FIN:
+		medsaf_cooling_timeout_tic = 0;
 		MEDSAF_fsm_off_sistema();
 		Medsaf_ticket_finalizar("OK");
 		Medsaf_cambiar_estado(MEDSAF_END);
@@ -1142,6 +1368,7 @@ static const char *Medsaf_get_state_text(void)
 	case MEDSAF_WASH: return "WASH";
 	case MEDSAF_RINSE: return "RINSE";
 	case MEDSAF_FINAL_RINSE: return "FINAL_RINSE";
+	case MEDSAF_DISINFECTION: return "DISINFECTION";
 	case MEDSAF_COOLING: return "COOLING";
 	case MEDSAF_FINALIZAR_MANUAL: return "FINALIZANDO_MANUAL";
 	case MEDSAF_END: return "END";
@@ -1159,6 +1386,7 @@ static const char *Medsaf_get_nextion_modo_text(void)
 	case MEDSAF_WASH: return "Lavado en curso...";
 	case MEDSAF_RINSE: return "Enjuagando...";
 	case MEDSAF_FINAL_RINSE: return "Enjuague final...";
+	case MEDSAF_DISINFECTION: return "Desinfeccion...";
 	case MEDSAF_COOLING: return "Enfriando...";
 	case MEDSAF_FINALIZAR_MANUAL: return "Finalizando...";
 	case MEDSAF_END: return "Finalizado";
@@ -1210,6 +1438,7 @@ static const char *Medsaf_get_substate_text(void)
 		case MEDSAF_PRE_WASH_INICIO: return "PRE_WASH_INICIO";
 		case MEDSAF_PRE_WASH_LLENAR_FRIA: return "PRE_WASH_LLENAR_FRIA";
 		case MEDSAF_PRE_WASH_COMPLETAR_LLENADO: return "PRE_WASH_COMPLETAR_LLENADO";
+		case MEDSAF_PRE_WASH_CALENTANDO: return "PRE_WASH_CALENTANDO";
 		case MEDSAF_PRE_WASH_LAVANDO: return "PRE_WASH_LAVANDO";
 		case MEDSAF_PRE_WASH_DRENAR: return "PRE_WASH_DRENAR";
 		case MEDSAF_PRE_WASH_DRENAJE_EXTRA: return "PRE_WASH_DRENAJE_EXTRA";
@@ -1238,7 +1467,10 @@ static const char *Medsaf_get_substate_text(void)
 		case MEDSAF_WASH_LLENAR_MEDIUM: return "WASH_LLENAR_MEDIUM";
 		case MEDSAF_WASH_DOSIFICAR_DETERGENTE: return "WASH_DOSIFICAR_DETERGENTE";
 		case MEDSAF_WASH_COMPLETAR_LLENADO: return "WASH_COMPLETAR_LLENADO";
+		case MEDSAF_WASH_CALENTANDO: return "WASH_CALENTANDO";
 		case MEDSAF_WASH_LAVANDO: return "WASH_LAVANDO";
+		case MEDSAF_WASH_DEGAS_ON: return "WASH_DEGAS_ON";
+		case MEDSAF_WASH_DEGAS_OFF: return "WASH_DEGAS_OFF";
 		case MEDSAF_WASH_ULTRASONIDO_ON: return "WASH_ULTRASONIDO_ON";
 		case MEDSAF_WASH_ULTRASONIDO_OFF: return "WASH_ULTRASONIDO_OFF";
 		case MEDSAF_WASH_DRENAR: return "WASH_DRENAR";
@@ -1276,6 +1508,21 @@ static const char *Medsaf_get_substate_text(void)
 		case MEDSAF_FINAL_RINSE_DRENAJE_EXTRA: return "FINAL_RINSE_DRENAJE_EXTRA";
 		case MEDSAF_FINAL_RINSE_FIN: return "FINAL_RINSE_FIN";
 		default: return "FINAL_RINSE_ESTADO_INVALIDO";
+		}
+	}
+
+	if (medsaf_state == MEDSAF_DISINFECTION)
+	{
+		switch (medsaf_disinfection_state)
+		{
+		case MEDSAF_DISINFECTION_INICIO: return "DISINFECTION_INICIO";
+		case MEDSAF_DISINFECTION_LLENAR: return "DISINFECTION_LLENAR";
+		case MEDSAF_DISINFECTION_CALENTANDO: return "DISINFECTION_CALENTANDO";
+		case MEDSAF_DISINFECTION_RECIRCULANDO: return "DISINFECTION_RECIRCULANDO";
+		case MEDSAF_DISINFECTION_DRENAR: return "DISINFECTION_DRENAR";
+		case MEDSAF_DISINFECTION_DRENAJE_EXTRA: return "DISINFECTION_DRENAJE_EXTRA";
+		case MEDSAF_DISINFECTION_FIN: return "DISINFECTION_FIN";
+		default: return "DISINFECTION_ESTADO_INVALIDO";
 		}
 	}
 
@@ -1358,6 +1605,7 @@ void Medsaf_fsm_init(void)
 	Medsaf_fsm_wash_init();
 	Medsaf_fsm_rinse_init();
 	Medsaf_fsm_final_rinse_init();
+	Medsaf_fsm_disinfection_init();
 	Medsaf_fsm_cooling_init();
 
 	MEDSAF_fsm_off_sistema();
@@ -1365,7 +1613,10 @@ void Medsaf_fsm_init(void)
 	Medsaf_control_puerta();
 	Medsaf_control_nivel_maximo();
 	if (medsaf_fsm_enable)
+	{
+		MEDSAF_fsm_on_puerta_sole();
 		Medsaf_ticket_iniciar();
+	}
 }
 
 MEDSAF_FSM_STATES_T Medsaf_fsm_get_state(void)
@@ -1398,6 +1649,11 @@ MEDSAF_FINAL_RINSE_STATES_T Medsaf_fsm_get_final_rinse_state(void)
 	return medsaf_final_rinse_state;
 }
 
+MEDSAF_DISINFECTION_STATES_T Medsaf_fsm_get_disinfection_state(void)
+{
+	return medsaf_disinfection_state;
+}
+
 MEDSAF_COOLING_STATES_T Medsaf_fsm_get_cooling_state(void)
 {
 	return medsaf_cooling_state;
@@ -1421,6 +1677,7 @@ void Medsaf_fsm_pause(void)
 	medsaf_drenaje_timeout_tic_pausa = medsaf_drenaje_timeout_tic;
 	medsaf_detergente_tic_pausa = medsaf_detergente_tic;
 	medsaf_wash_tic_pausa = medsaf_wash_tic;
+	medsaf_degas_tic_pausa = medsaf_degas_tic;
 	medsaf_ultrasonido_total_tic_pausa = medsaf_ultrasonido_total_tic;
 	medsaf_ultrasonido_pulso_tic_pausa = medsaf_ultrasonido_pulso_tic;
 	medsaf_calefaccion_timeout_tic_pausa = medsaf_calefaccion_timeout_tic;
@@ -1428,7 +1685,9 @@ void Medsaf_fsm_pause(void)
 	medsaf_calefactor_muestra_tic_pausa = medsaf_calefactor_muestra_tic;
 	medsaf_rinse_tic_pausa = medsaf_rinse_tic;
 	medsaf_final_rinse_tic_pausa = medsaf_final_rinse_tic;
+	medsaf_disinfection_tic_pausa = medsaf_disinfection_tic;
 	medsaf_cooling_tic_pausa = medsaf_cooling_tic;
+	medsaf_cooling_timeout_tic_pausa = medsaf_cooling_timeout_tic;
 	medsaf_pre_wash_tic = 0;
 	medsaf_tapa_tic = 0;
 	medsaf_drenaje_extra_tic = 0;
@@ -1436,6 +1695,7 @@ void Medsaf_fsm_pause(void)
 	medsaf_drenaje_timeout_tic = 0;
 	medsaf_detergente_tic = 0;
 	medsaf_wash_tic = 0;
+	medsaf_degas_tic = 0;
 	medsaf_ultrasonido_total_tic = 0;
 	medsaf_ultrasonido_pulso_tic = 0;
 	medsaf_calefaccion_timeout_tic = 0;
@@ -1443,7 +1703,9 @@ void Medsaf_fsm_pause(void)
 	medsaf_calefactor_muestra_tic = 0;
 	medsaf_rinse_tic = 0;
 	medsaf_final_rinse_tic = 0;
+	medsaf_disinfection_tic = 0;
 	medsaf_cooling_tic = 0;
+	medsaf_cooling_timeout_tic = 0;
 	medsaf_fsm_enable = 0;
 	medsaf_fsm_paused = 1;
 	MEDSAF_fsm_off_sistema();
@@ -1476,6 +1738,7 @@ void Medsaf_fsm_continue(void)
 	medsaf_drenaje_timeout_tic = medsaf_drenaje_timeout_tic_pausa;
 	medsaf_detergente_tic = medsaf_detergente_tic_pausa;
 	medsaf_wash_tic = medsaf_wash_tic_pausa;
+	medsaf_degas_tic = medsaf_degas_tic_pausa;
 	medsaf_ultrasonido_total_tic = medsaf_ultrasonido_total_tic_pausa;
 	medsaf_ultrasonido_pulso_tic = medsaf_ultrasonido_pulso_tic_pausa;
 	medsaf_calefaccion_timeout_tic = medsaf_calefaccion_timeout_tic_pausa;
@@ -1483,7 +1746,9 @@ void Medsaf_fsm_continue(void)
 	medsaf_calefactor_muestra_tic = medsaf_calefactor_muestra_tic_pausa;
 	medsaf_rinse_tic = medsaf_rinse_tic_pausa;
 	medsaf_final_rinse_tic = medsaf_final_rinse_tic_pausa;
+	medsaf_disinfection_tic = medsaf_disinfection_tic_pausa;
 	medsaf_cooling_tic = medsaf_cooling_tic_pausa;
+	medsaf_cooling_timeout_tic = medsaf_cooling_timeout_tic_pausa;
 	medsaf_fsm_paused = 0;
 	medsaf_fsm_enable = 1;
 	Nextion_ChangeState(REPRO1, Lavando_NextionState);
@@ -1505,13 +1770,16 @@ void Medsaf_fsm_finish(void)
 	medsaf_drenaje_timeout_tic = 0;
 	medsaf_detergente_tic = 0;
 	medsaf_wash_tic = 0;
+	medsaf_degas_tic = 0;
 	medsaf_ultrasonido_total_tic = 0;
 	medsaf_ultrasonido_pulso_tic = 0;
 	medsaf_calefaccion_timeout_tic = 0;
 	Medsaf_calefactor_monitor_stop();
 	medsaf_rinse_tic = 0;
 	medsaf_final_rinse_tic = 0;
+	medsaf_disinfection_tic = 0;
 	medsaf_cooling_tic = 0;
+	medsaf_cooling_timeout_tic = 0;
 	medsaf_fsm_paused = 0;
 	medsaf_fsm_enable = 1;
 	medsaf_finish_state = MEDSAF_FINISH_DRENAR;
@@ -1619,6 +1887,10 @@ void Medsaf_fsm_runcycle(void)
 		Medsaf_fsm_final_rinse_runcycle();
 		break;
 
+	case MEDSAF_DISINFECTION:
+		Medsaf_fsm_disinfection_runcycle();
+		break;
+
 	case MEDSAF_COOLING:
 		Medsaf_fsm_cooling_runcycle();
 		break;
@@ -1632,8 +1904,7 @@ void Medsaf_fsm_runcycle(void)
 		break;
 
 	default:
-		MEDSAF_fsm_off_sistema();
-		medsaf_fsm_enable = 0;
+		Medsaf_detener_por_error("Estado FSM invalido");
 		break;
 	}
 }

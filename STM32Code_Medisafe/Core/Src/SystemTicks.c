@@ -101,6 +101,9 @@ void SystemTicks_1ms(){
 	if (medsaf_wash_tic > 0)
 		medsaf_wash_tic--;
 
+	if (medsaf_degas_tic > 0)
+		medsaf_degas_tic--;
+
 	if (medsaf_ultrasonido_total_tic > 0)
 		medsaf_ultrasonido_total_tic--;
 
@@ -122,8 +125,14 @@ void SystemTicks_1ms(){
 	if (medsaf_final_rinse_tic > 0)
 		medsaf_final_rinse_tic--;
 
+	if (medsaf_disinfection_tic > 0)
+		medsaf_disinfection_tic--;
+
 	if (medsaf_cooling_tic > 0)
 		medsaf_cooling_tic--;
+
+	if (medsaf_cooling_timeout_tic > 0)
+		medsaf_cooling_timeout_tic--;
 
 	if (medsaf_buzzer_tic > 0)
 		medsaf_buzzer_tic--;

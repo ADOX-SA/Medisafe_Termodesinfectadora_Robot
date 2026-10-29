@@ -1,1 +1,2 @@
-../Core/Src/ntc_adc.c:84:6:NTC_ADC_Loop	32	static
+../Core/Src/ntc_adc.c:67:14:NTC_ADC_CalculateTemp	32	static
+../Core/Src/ntc_adc.c:94:6:NTC_ADC_Loop	24	static
