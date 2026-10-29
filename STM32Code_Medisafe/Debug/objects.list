@@ -3,6 +3,7 @@
 "./Core/Src/MAX6675.o"
 "./Core/Src/Medisafe.o"
 "./Core/Src/Medisafe_Gpio_Config.o"
+"./Core/Src/Medisafe_Mode_Config.o"
 "./Core/Src/SystemTicks.o"
 "./Core/Src/UltrasonicGenerator.o"
 "./Core/Src/ds18b20.o"

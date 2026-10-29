@@ -109,21 +109,71 @@ static uint8_t Medsaf_nextion_parse_start(const uint8_t *medsaf_received_data)
 {
 	const char *medsaf_comando = (const char *)medsaf_received_data;
 
-	/* Formato exacto esperado: start:p1_std ... start:p6_rbt. */
-	if ((strlen(medsaf_comando) != 12) ||
-		(strncmp(medsaf_comando, "start:p", 7) != 0) ||
-		(medsaf_comando[7] < '1') || (medsaf_comando[7] > '6') ||
-		(medsaf_comando[8] != '_'))
-		return 0;
-
-	if (strcmp(&medsaf_comando[9], "std") == 0)
+	if (strcmp(medsaf_comando, "start:p1_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P1;
 		medsaf_modo = MEDSAF_MODO_ESTANDAR;
-	else if (strcmp(&medsaf_comando[9], "rbt") == 0)
+	}
+	else if (strcmp(medsaf_comando, "start:p2_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P2;
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	}
+	else if (strcmp(medsaf_comando, "start:p3_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P3;
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	}
+	else if (strcmp(medsaf_comando, "start:p4_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P4;
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	}
+	else if (strcmp(medsaf_comando, "start:p5_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P5;
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	}
+	else if (strcmp(medsaf_comando, "start:p6_std") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P6;
+		medsaf_modo = MEDSAF_MODO_ESTANDAR;
+	}
+	else if (strcmp(medsaf_comando, "start:p1_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P1;
 		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
+	else if (strcmp(medsaf_comando, "start:p2_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P2;
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
+	else if (strcmp(medsaf_comando, "start:p3_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P3;
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
+	else if (strcmp(medsaf_comando, "start:p4_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P4;
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
+	else if (strcmp(medsaf_comando, "start:p5_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P5;
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
+	else if (strcmp(medsaf_comando, "start:p6_rbt") == 0)
+	{
+		medsaf_programa = MEDSAF_PROGRAMA_P6;
+		medsaf_modo = MEDSAF_MODO_ROBOT;
+	}
 	else
+	{
 		return 0;
+	}
 
-	medsaf_programa = (MEDSAF_PROGRAMA_T)(medsaf_comando[7] - '0');
 	return 1;
 }
 
