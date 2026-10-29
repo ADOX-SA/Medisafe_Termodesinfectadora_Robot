@@ -348,11 +348,15 @@ static void Medsaf_ticket_encolar_instancia(MEDSAF_FSM_STATES_T medsaf_instancia
 
 static void Medsaf_ticket_encolar_duraciones(void)
 {
-	Medsaf_ticket_encolar_instancia(MEDSAF_PRE_WASH, "Prelavado");
-	Medsaf_ticket_encolar_instancia(MEDSAF_WASH, "Lavado con detergente");
-	Medsaf_ticket_encolar_instancia(MEDSAF_RINSE, "Enjuague");
+	if (medsaf_mode_config->pre_wash_tic)
+		Medsaf_ticket_encolar_instancia(MEDSAF_PRE_WASH, "Prelavado");
+	if (medsaf_mode_config->wash_tic)
+		Medsaf_ticket_encolar_instancia(MEDSAF_WASH, "Lavado con detergente");
+	if (medsaf_mode_config->rinse_tic)
+		Medsaf_ticket_encolar_instancia(MEDSAF_RINSE, "Enjuague");
 	Medsaf_ticket_encolar_instancia(MEDSAF_FINAL_RINSE, "Enjuague final");
-	Medsaf_ticket_encolar_instancia(MEDSAF_DISINFECTION, "Desinfeccion");
+	if (medsaf_mode_config->disinfection_tic)
+		Medsaf_ticket_encolar_instancia(MEDSAF_DISINFECTION, "Desinfeccion");
 	Medsaf_ticket_encolar_instancia(MEDSAF_COOLING, "Enfriamiento");
 }
 
@@ -874,6 +878,12 @@ static void Medsaf_fsm_wash_runcycle(void)
 	switch (medsaf_wash_state)
 	{
 	case MEDSAF_WASH_INICIO:
+		if (!medsaf_mode_config->wash_tic)
+		{
+			Medsaf_fsm_rinse_init();
+			Medsaf_cambiar_estado(MEDSAF_RINSE);
+			break;
+		}
 		MEDSAF_fsm_off_sistema();
 		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_cold_water();
@@ -887,9 +897,14 @@ static void Medsaf_fsm_wash_runcycle(void)
 			(medsaf_nivel_bacha == MEDSAF_BACHA_MEDIUM) ||
 			(medsaf_nivel_bacha == MEDSAF_BACHA_HIGH))
 		{
-			MEDSAF_fsm_on_detergente();
-			medsaf_detergente_tic = MEDSAF_TIME_DETERGENTE;
-			medsaf_wash_state = MEDSAF_WASH_DOSIFICAR_DETERGENTE;
+			if (medsaf_mode_config->wash_chemical_ml)
+			{
+				MEDSAF_fsm_on_detergente();
+				medsaf_detergente_tic = MEDSAF_TIME_DETERGENTE;
+				medsaf_wash_state = MEDSAF_WASH_DOSIFICAR_DETERGENTE;
+			}
+			else
+				medsaf_wash_state = MEDSAF_WASH_COMPLETAR_LLENADO;
 		}
 		else
 			Medsaf_control_timeout_llenado();
@@ -944,6 +959,17 @@ static void Medsaf_fsm_wash_runcycle(void)
 		break;
 
 	case MEDSAF_WASH_LAVANDO:
+		if (!medsaf_mode_config->degas_tic)
+		{
+			medsaf_wash_tic = medsaf_mode_config->wash_tic;
+			if (medsaf_wash_tic)
+			{
+				MEDSAF_fsm_on_ultrasonido();
+				medsaf_ultrasonido_pulso_tic = MEDSAF_TIME_WASH_ULTRASONIDO;
+			}
+			medsaf_wash_state = MEDSAF_WASH_ULTRASONIDO_ON;
+			break;
+		}
 		/* Degas sin recirculacion, tal como indica el manual. */
 		MEDSAF_fsm_off_lavado_bomba();
 		MEDSAF_SOLIN_TAPA_OFF
@@ -1072,6 +1098,12 @@ static void Medsaf_fsm_rinse_runcycle(void)
 	switch (medsaf_rinse_state)
 	{
 	case MEDSAF_RINSE_INICIO:
+		if (!medsaf_mode_config->rinse_tic)
+		{
+			Medsaf_fsm_final_rinse_init();
+			Medsaf_cambiar_estado(MEDSAF_FINAL_RINSE);
+			break;
+		}
 		MEDSAF_fsm_off_sistema();
 		MEDSAF_fsm_on_puerta_sole();
 		MEDSAF_fsm_on_hot_water();
@@ -1289,7 +1321,10 @@ static void Medsaf_fsm_disinfection_runcycle(void)
 		}
 		MEDSAF_fsm_off_sistema();
 		MEDSAF_fsm_on_puerta_sole();
-		MEDSAF_fsm_on_hot_water();
+		if (medsaf_temperatura_objetivo > 0.0f)
+			MEDSAF_fsm_on_hot_water();
+		else
+			MEDSAF_fsm_on_cold_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_disinfection_state = MEDSAF_DISINFECTION_LLENAR;
 		break;
