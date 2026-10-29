@@ -19,7 +19,8 @@ typedef enum
 {
 	MEDSAF_BUZZER_APAGADO = 0,
 	MEDSAF_BUZZER_ERROR,
-	MEDSAF_BUZZER_FIN
+	MEDSAF_BUZZER_FIN,
+	MEDSAF_BUZZER_TRANSICION
 } MEDSAF_BUZZER_STATES_T;
 
 static MEDSAF_FSM_STATES_T medsaf_state;
@@ -69,10 +70,12 @@ uint32_t medsaf_disinfection_tic;
 uint32_t medsaf_cooling_tic;
 uint32_t medsaf_cooling_timeout_tic;
 uint32_t medsaf_buzzer_tic;
+bool medsaf_buzzer_transiciones_enable = true;
 
 static MEDSAF_BUZZER_STATES_T medsaf_buzzer_state;
 static uint8_t medsaf_buzzer_pulsos;
 static uint8_t medsaf_buzzer_on;
+static uint16_t medsaf_buzzer_substate_anterior;
 
 static uint8_t medsaf_salidas_pausa[16];
 static uint32_t medsaf_pre_wash_tic_pausa;
@@ -127,6 +130,8 @@ static void Medsaf_fsm_final_rinse_init(void);
 static void Medsaf_fsm_disinfection_init(void);
 static void Medsaf_fsm_cooling_init(void);
 static void Medsaf_buzzer_fin_init(void);
+static void Medsaf_buzzer_transicion_init(void);
+static void Medsaf_buzzer_controlar_transicion(void);
 static void Medsaf_ticket_iniciar(void);
 static void Medsaf_ticket_finalizar(const char *medsaf_resultado);
 static void Medsaf_ticket_cerrar_instancia_actual(void);
@@ -342,7 +347,6 @@ static void Medsaf_ticket_encolar_instancia(MEDSAF_FSM_STATES_T medsaf_instancia
 
 static void Medsaf_ticket_encolar_duraciones(void)
 {
-	Medsaf_ticket_encolar_instancia(MEDSAF_PREPARE_TANK, "Preparacion cuba");
 	Medsaf_ticket_encolar_instancia(MEDSAF_PRE_WASH, "Prelavado");
 	Medsaf_ticket_encolar_instancia(MEDSAF_WASH, "Lavado con detergente");
 	Medsaf_ticket_encolar_instancia(MEDSAF_RINSE, "Enjuague");
@@ -489,12 +493,77 @@ static void Medsaf_buzzer_fin_init(void)
 	medsaf_buzzer_tic = MEDSAF_TIME_BUZZER_FIN;
 }
 
+static void Medsaf_buzzer_transicion_init(void)
+{
+	if (!medsaf_buzzer_transiciones_enable ||
+		(medsaf_buzzer_state == MEDSAF_BUZZER_ERROR) ||
+		(medsaf_buzzer_state == MEDSAF_BUZZER_FIN))
+		return;
+
+	medsaf_buzzer_state = MEDSAF_BUZZER_TRANSICION;
+	medsaf_buzzer_pulsos = 0;
+	medsaf_buzzer_on = 1;
+	fsm_on_buzzer();
+	medsaf_buzzer_tic = MEDSAF_TIME_BUZZER_TRANSICION;
+}
+
+static uint16_t Medsaf_get_substate_key(void)
+{
+	uint8_t medsaf_substate = 0;
+
+	switch (medsaf_state)
+	{
+	case MEDSAF_PRE_WASH:
+		medsaf_substate = (uint8_t)medsaf_pre_wash_state;
+		break;
+	case MEDSAF_WASH:
+		medsaf_substate = (uint8_t)medsaf_wash_state;
+		break;
+	case MEDSAF_RINSE:
+		medsaf_substate = (uint8_t)medsaf_rinse_state;
+		break;
+	case MEDSAF_FINAL_RINSE:
+		medsaf_substate = (uint8_t)medsaf_final_rinse_state;
+		break;
+	case MEDSAF_DISINFECTION:
+		medsaf_substate = (uint8_t)medsaf_disinfection_state;
+		break;
+	case MEDSAF_COOLING:
+		medsaf_substate = (uint8_t)medsaf_cooling_state;
+		break;
+	default:
+		break;
+	}
+
+	return ((uint16_t)medsaf_state << 8) | medsaf_substate;
+}
+
+static void Medsaf_buzzer_controlar_transicion(void)
+{
+	uint16_t medsaf_substate_actual = Medsaf_get_substate_key();
+
+	if (medsaf_substate_actual == medsaf_buzzer_substate_anterior)
+		return;
+
+	medsaf_buzzer_substate_anterior = medsaf_substate_actual;
+	if ((medsaf_state >= MEDSAF_PRE_WASH) &&
+		(medsaf_state <= MEDSAF_COOLING))
+		Medsaf_buzzer_transicion_init();
+}
+
 static void Medsaf_buzzer_runcycle(void)
 {
 	uint32_t medsaf_tiempo_buzzer;
 
 	if (medsaf_buzzer_state == MEDSAF_BUZZER_APAGADO)
 		return;
+
+	if (medsaf_buzzer_state == MEDSAF_BUZZER_TRANSICION)
+	{
+		if (!medsaf_buzzer_tic)
+			Medsaf_buzzer_off();
+		return;
+	}
 
 	if (medsaf_buzzer_pulsos >= 3)
 	{
@@ -1670,6 +1739,7 @@ void Medsaf_fsm_init(void)
 	Medsaf_fsm_final_rinse_init();
 	Medsaf_fsm_disinfection_init();
 	Medsaf_fsm_cooling_init();
+	medsaf_buzzer_substate_anterior = Medsaf_get_substate_key();
 
 	MEDSAF_fsm_off_sistema();
 	Medsaf_actualizar_nivel_bacha();
@@ -1970,4 +2040,6 @@ void Medsaf_fsm_runcycle(void)
 		Medsaf_detener_por_error("Estado FSM invalido");
 		break;
 	}
+
+	Medsaf_buzzer_controlar_transicion();
 }

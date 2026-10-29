@@ -18,5 +18,5 @@
 ../Core/Src/ticket.c:354:6:Ticket_NeedsRtcNow	8	static
 ../Core/Src/ticket.c:392:9:Ticket_EnqLockTestResultadoRtc	104	static
 ../Core/Src/ticket.c:407:9:Ticket_EnqEstanqueidadResultadoRtc	104	static
-../Core/Src/ticket.c:527:6:Ticket_LoopAll	48	static
-../Core/Src/ticket.c:546:6:Ticket_ServicePrintAll	24	static
+../Core/Src/ticket.c:528:6:Ticket_LoopAll	48	static
+../Core/Src/ticket.c:547:6:Ticket_ServicePrintAll	24	static

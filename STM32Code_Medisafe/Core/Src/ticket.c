@@ -476,7 +476,8 @@ static void exec_action(ENUM_REF_LAV_T lav, TicketCtx *t, const TicketAction *a)
         case ACT_FINISH:
             tk_append(t, SEP_LINE);
             tk_printf(t, "Resultado: %s\r\n", a->u.finish.resultado);
-            tk_printf(t, "Fallas: %s\r\n", a->u.finish.fallas);
+			if (strcmp(a->u.finish.resultado, "OK") != 0)
+				tk_printf(t, "Fallas: %s\r\n", a->u.finish.fallas);
             break;
 
         case ACT_PRINT: {

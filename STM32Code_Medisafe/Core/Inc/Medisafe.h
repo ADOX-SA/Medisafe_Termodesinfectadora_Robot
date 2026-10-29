@@ -8,6 +8,7 @@
 #define INC_MEDISAFE_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "Medisafe_Mode_Config.h"
 
 /* Estados principales de la FSM Medisafe. */
@@ -151,6 +152,7 @@ extern uint8_t medsaf_error_temperatura;
 extern MEDSAF_MODO_T medsaf_modo;
 extern MEDSAF_PROGRAMA_T medsaf_programa;
 extern MEDSAF_NIVEL_BACHA_T medsaf_nivel_bacha;
+extern bool medsaf_buzzer_transiciones_enable;
 
 /* Temporizadores descendentes atendidos cada 1 ms por SystemTicks_1ms(). */
 extern uint32_t medsaf_pre_wash_tic;
