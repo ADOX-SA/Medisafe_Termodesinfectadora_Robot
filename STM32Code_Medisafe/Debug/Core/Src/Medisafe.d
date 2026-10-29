@@ -1,5 +1,6 @@
 Core/Src/Medisafe.o: ../Core/Src/Medisafe.c ../Core/Inc/Medisafe.h \
- ../Core/Inc/relay_module.h ../Core/Inc/global_variables.h \
+ ../Core/Inc/Medisafe_Mode_Config.h ../Core/Inc/relay_module.h \
+ ../Core/Inc/global_variables.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -34,6 +35,7 @@ Core/Src/Medisafe.o: ../Core/Src/Medisafe.c ../Core/Inc/Medisafe.h \
  ../Core/Inc/global_variables.h ../Core/Inc/user_gpio.h \
  ../Core/Inc/ticket.h
 ../Core/Inc/Medisafe.h:
+../Core/Inc/Medisafe_Mode_Config.h:
 ../Core/Inc/relay_module.h:
 ../Core/Inc/global_variables.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:

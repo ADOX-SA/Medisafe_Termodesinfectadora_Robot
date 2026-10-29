@@ -9,6 +9,7 @@ C_SRCS += \
 ../Core/Src/ENDOCLEAN2000.c \
 ../Core/Src/MAX6675.c \
 ../Core/Src/Medisafe.c \
+../Core/Src/Medisafe_Mode_Config.c \
 ../Core/Src/Medisafe_Gpio_Config.c \
 ../Core/Src/SystemTicks.c \
 ../Core/Src/UltrasonicGenerator.c \
@@ -39,6 +40,7 @@ OBJS += \
 ./Core/Src/ENDOCLEAN2000.o \
 ./Core/Src/MAX6675.o \
 ./Core/Src/Medisafe.o \
+./Core/Src/Medisafe_Mode_Config.o \
 ./Core/Src/Medisafe_Gpio_Config.o \
 ./Core/Src/SystemTicks.o \
 ./Core/Src/UltrasonicGenerator.o \
@@ -69,6 +71,7 @@ C_DEPS += \
 ./Core/Src/ENDOCLEAN2000.d \
 ./Core/Src/MAX6675.d \
 ./Core/Src/Medisafe.d \
+./Core/Src/Medisafe_Mode_Config.d \
 ./Core/Src/Medisafe_Gpio_Config.d \
 ./Core/Src/SystemTicks.d \
 ./Core/Src/UltrasonicGenerator.d \

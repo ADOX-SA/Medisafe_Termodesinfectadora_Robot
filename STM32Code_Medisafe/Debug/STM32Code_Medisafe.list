@@ -27,27 +27,27 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  0000c118  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0002c52d  00000000  00000000  0000c141  2**0
+ 12 .debug_info   0002c541  00000000  00000000  0000c141  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00005f6e  00000000  00000000  0003866e  2**0
+ 13 .debug_abbrev 00005f1b  00000000  00000000  00038682  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_loclists 0000eeb5  00000000  00000000  0003e5dc  2**0
+ 14 .debug_loclists 0000eeb5  00000000  00000000  0003e59d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_aranges 00001a90  00000000  00000000  0004d498  2**3
+ 15 .debug_aranges 00001a90  00000000  00000000  0004d458  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_rnglists 00001ecf  00000000  00000000  0004ef28  2**0
+ 16 .debug_rnglists 00001ecf  00000000  00000000  0004eee8  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_macro  0001dc85  00000000  00000000  00050df7  2**0
+ 17 .debug_macro  0001dbb3  00000000  00000000  00050db7  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_line   00032c0b  00000000  00000000  0006ea7c  2**0
+ 18 .debug_line   00032c73  00000000  00000000  0006e96a  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_str    0009c7d8  00000000  00000000  000a1687  2**0
+ 19 .debug_str    0009c7f5  00000000  00000000  000a15dd  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .comment      00000043  00000000  00000000  0013de5f  2**0
+ 20 .comment      00000043  00000000  00000000  0013ddd2  2**0
                   CONTENTS, READONLY
- 21 .debug_frame  00005340  00000000  00000000  0013dea4  2**2
+ 21 .debug_frame  00005340  00000000  00000000  0013de18  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 22 .debug_line_str 000000b3  00000000  00000000  001431e4  2**0
+ 22 .debug_line_str 000000b3  00000000  00000000  00143158  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:

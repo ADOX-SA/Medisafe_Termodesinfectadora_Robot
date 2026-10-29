@@ -36,7 +36,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Core/Inc/nextion.h ../Core/Inc/user_gpio.h ../Core/Inc/SystemTicks.h \
  ../Core/Inc/ntc_adc.h ../Core/Inc/CSN_A2.h ../Core/Inc/ticket.h \
  ../Core/Inc/UltrasonicGenerator.h ../Core/Inc/ENDOCLEAN2000.h \
- ../Core/Inc/Medisafe.h
+ ../Core/Inc/Medisafe.h ../Core/Inc/Medisafe_Mode_Config.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 ../Core/Inc/stm32f1xx_hal_conf.h:
@@ -86,3 +86,4 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/UltrasonicGenerator.h:
 ../Core/Inc/ENDOCLEAN2000.h:
 ../Core/Inc/Medisafe.h:
+../Core/Inc/Medisafe_Mode_Config.h:
