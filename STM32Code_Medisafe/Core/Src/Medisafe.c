@@ -13,6 +13,7 @@
 #include "user_gpio.h"
 #include "ticket.h"
 #include <stdio.h>
+#include <string.h>
 
 typedef enum
 {
@@ -94,6 +95,11 @@ static uint32_t medsaf_cooling_tic_pausa;
 static uint32_t medsaf_cooling_timeout_tic_pausa;
 static uint8_t medsaf_ticket_activo;
 static char medsaf_ticket_proceso[16];
+static char medsaf_ticket_falla[30];
+static uint32_t medsaf_ticket_instancia_inicio_tic;
+static uint32_t medsaf_ticket_duracion_instancia[MEDSAF_END + 1];
+static uint8_t medsaf_ticket_instancia_ejecutada[MEDSAF_END + 1];
+static MEDSAF_FSM_STATES_T medsaf_ticket_instancia_actual;
 
 static MEDSAF_CALEFACTOR_CONTROL_T medsaf_calefactor_control;
 
@@ -123,6 +129,8 @@ static void Medsaf_fsm_cooling_init(void);
 static void Medsaf_buzzer_fin_init(void);
 static void Medsaf_ticket_iniciar(void);
 static void Medsaf_ticket_finalizar(const char *medsaf_resultado);
+static void Medsaf_ticket_cerrar_instancia_actual(void);
+static void Medsaf_ticket_encolar_duraciones(void);
 
 static void Medsaf_calefactor_monitor_stop(void)
 {
@@ -273,8 +281,19 @@ static uint8_t Medsaf_calefactor_monitor_runcycle(void)
 
 static void Medsaf_ticket_iniciar(void)
 {
+	uint8_t medsaf_i;
+
 	if (medsaf_ticket_activo)
 		return;
+
+	for (medsaf_i = 0; medsaf_i <= MEDSAF_END; medsaf_i++)
+	{
+		medsaf_ticket_duracion_instancia[medsaf_i] = 0;
+		medsaf_ticket_instancia_ejecutada[medsaf_i] = 0;
+	}
+	medsaf_ticket_falla[0] = '\0';
+	medsaf_ticket_instancia_actual = medsaf_state;
+	medsaf_ticket_instancia_inicio_tic = HAL_GetTick();
 
 	snprintf(medsaf_ticket_proceso, sizeof(medsaf_ticket_proceso),
 			 "P%d %s", (int)medsaf_programa,
@@ -293,7 +312,43 @@ static void Medsaf_ticket_error(const char *medsaf_mensaje)
 
 	snprintf(medsaf_evento, sizeof(medsaf_evento),
 			 "ERROR: %s", medsaf_mensaje);
+	strncpy(medsaf_ticket_falla, medsaf_mensaje, sizeof(medsaf_ticket_falla) - 1);
+	medsaf_ticket_falla[sizeof(medsaf_ticket_falla) - 1] = '\0';
 	Ticket_EnqEventRtc(REPRO1, medsaf_evento);
+}
+
+static void Medsaf_ticket_cerrar_instancia_actual(void)
+{
+	uint32_t medsaf_duracion;
+
+	if (!medsaf_ticket_activo || (medsaf_ticket_instancia_actual > MEDSAF_END))
+		return;
+
+	medsaf_duracion = HAL_GetTick() - medsaf_ticket_instancia_inicio_tic;
+	medsaf_ticket_duracion_instancia[medsaf_ticket_instancia_actual] += medsaf_duracion;
+	medsaf_ticket_instancia_ejecutada[medsaf_ticket_instancia_actual] = 1;
+	medsaf_ticket_instancia_actual = MEDSAF_END;
+}
+
+static void Medsaf_ticket_encolar_instancia(MEDSAF_FSM_STATES_T medsaf_instancia,
+		const char *medsaf_nombre)
+{
+	if (!medsaf_ticket_instancia_ejecutada[medsaf_instancia])
+		return;
+
+	Ticket_EnqStageDuration(REPRO1, medsaf_nombre,
+			medsaf_ticket_duracion_instancia[medsaf_instancia]);
+}
+
+static void Medsaf_ticket_encolar_duraciones(void)
+{
+	Medsaf_ticket_encolar_instancia(MEDSAF_PREPARE_TANK, "Preparacion cuba");
+	Medsaf_ticket_encolar_instancia(MEDSAF_PRE_WASH, "Prelavado");
+	Medsaf_ticket_encolar_instancia(MEDSAF_WASH, "Lavado con detergente");
+	Medsaf_ticket_encolar_instancia(MEDSAF_RINSE, "Enjuague");
+	Medsaf_ticket_encolar_instancia(MEDSAF_FINAL_RINSE, "Enjuague final");
+	Medsaf_ticket_encolar_instancia(MEDSAF_DISINFECTION, "Desinfeccion");
+	Medsaf_ticket_encolar_instancia(MEDSAF_COOLING, "Enfriamiento");
 }
 
 static void Medsaf_ticket_finalizar(const char *medsaf_resultado)
@@ -301,8 +356,10 @@ static void Medsaf_ticket_finalizar(const char *medsaf_resultado)
 	if (!medsaf_ticket_activo)
 		return;
 
+	Medsaf_ticket_cerrar_instancia_actual();
 	Ticket_EnqStepEndRtc(REPRO1, medsaf_ticket_proceso);
-	Ticket_EnqFinish(REPRO1, medsaf_resultado, "");
+	Medsaf_ticket_encolar_duraciones();
+	Ticket_EnqFinish(REPRO1, medsaf_resultado, medsaf_ticket_falla);
 	Ticket_EnqPrint(REPRO1);
 	medsaf_ticket_activo = 0;
 }
@@ -469,8 +526,14 @@ static void Medsaf_buzzer_runcycle(void)
 
 static void Medsaf_cambiar_estado(MEDSAF_FSM_STATES_T medsaf_nuevo_estado)
 {
+	Medsaf_ticket_cerrar_instancia_actual();
 	medsaf_proximo_state = medsaf_nuevo_estado;
 	medsaf_state = medsaf_proximo_state;
+	if (medsaf_ticket_activo)
+	{
+		medsaf_ticket_instancia_actual = medsaf_nuevo_estado;
+		medsaf_ticket_instancia_inicio_tic = HAL_GetTick();
+	}
 }
 
 static uint8_t Medsaf_control_puerta(void)

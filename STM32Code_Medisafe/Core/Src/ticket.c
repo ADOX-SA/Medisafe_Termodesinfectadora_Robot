@@ -31,6 +31,7 @@ typedef enum {
 
     ACT_EVENT_RTC,
     ACT_EVENT_CACHED,
+	ACT_STAGE_DURATION,
 
 	ACT_LOCK_TEST_RESULT_RTC,
 
@@ -60,6 +61,11 @@ typedef struct {
         struct { // EVENT / ESTANQ RESULT
             char msg[50];
         } event;
+
+		struct { // ACT_STAGE_DURATION
+			char label[24];
+			uint32_t duration_ms;
+		} stage;
 
         struct { // FINISH
             char resultado[16];
@@ -304,6 +310,20 @@ uint8_t Ticket_EnqStepEndCached(ENUM_REF_LAV_T lav, const char *label)   { retur
 uint8_t Ticket_EnqEventRtc(ENUM_REF_LAV_T lav, const char *msg)          { return enq_msg(lav, ACT_EVENT_RTC, msg); }
 uint8_t Ticket_EnqEventCached(ENUM_REF_LAV_T lav, const char *msg)       { return enq_msg(lav, ACT_EVENT_CACHED, msg); }
 
+uint8_t Ticket_EnqStageDuration(ENUM_REF_LAV_T lav, const char *label, uint32_t duration_ms)
+{
+	TicketCtx *t = get_ctx(lav);
+	TicketAction a;
+
+	if (!t) return 0;
+
+	memset(&a, 0, sizeof(a));
+	a.type = ACT_STAGE_DURATION;
+	strncpy(a.u.stage.label, label, sizeof(a.u.stage.label) - 1);
+	a.u.stage.duration_ms = duration_ms;
+	return tq_push(&t->tq, &a);
+}
+
 uint8_t Ticket_EnqFinish(ENUM_REF_LAV_T lav, const char *resultado, const char *fallas)
 {
     TicketCtx *t = get_ctx(lav);
@@ -424,6 +444,7 @@ static void exec_action(ENUM_REF_LAV_T lav, TicketCtx *t, const TicketAction *a)
             char mmss[16]; fmt_mmss(mmss, sizeof(mmss), dur_ms);
             tk_printf(t, "Duracion: %s\r\n", mmss);
             tk_printf(t, "Finalizacion: %s\r\n", hora_cached_or_placeholder(t));
+			tk_append(t, SEP_LINE);
             break;
         }
 
@@ -431,6 +452,17 @@ static void exec_action(ENUM_REF_LAV_T lav, TicketCtx *t, const TicketAction *a)
         case ACT_EVENT_CACHED:
             tk_printf(t, "*** %s (%s) ***\r\n", a->u.event.msg, hora_cached_or_placeholder(t));
             break;
+
+		case ACT_STAGE_DURATION: {
+			uint32_t total_seconds = a->u.stage.duration_ms / 1000;
+			uint32_t minutes = total_seconds / 60;
+			uint32_t seconds = total_seconds % 60;
+			tk_printf(t, "%s: %lu min %02lu s\r\n",
+					a->u.stage.label,
+					(unsigned long)minutes,
+					(unsigned long)seconds);
+			break;
+		}
 
         case ACT_LOCK_TEST_RESULT_RTC:
         	tk_printf(t, "P. Bloqueo (resultado): %s (%s)\r\n", a->u.event.msg, hora_cached_or_placeholder(t));
