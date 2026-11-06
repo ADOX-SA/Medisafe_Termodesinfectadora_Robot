@@ -29,12 +29,13 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- ../Core/Inc/i2c_pressure.h ../Core/Inc/rfid_wiegand.h ../Core/Inc/main.h \
- ../Core/Inc/fsm_reprocesadora1.h ../Core/Inc/rs485_pressure_sensor.h \
- ../Core/Inc/watchdog.h ../Core/Inc/relay_module.h \
- ../Core/Inc/global_variables.h ../Core/Inc/global_variables.h \
- ../Core/Inc/nextion.h ../Core/Inc/user_gpio.h ../Core/Inc/SystemTicks.h \
- ../Core/Inc/ntc_adc.h ../Core/Inc/CSN_A2.h ../Core/Inc/ticket.h \
+ ../Core/Inc/nextion_ota.h ../Core/Inc/main.h ../Core/Inc/i2c_pressure.h \
+ ../Core/Inc/rfid_wiegand.h ../Core/Inc/fsm_reprocesadora1.h \
+ ../Core/Inc/rs485_pressure_sensor.h ../Core/Inc/watchdog.h \
+ ../Core/Inc/relay_module.h ../Core/Inc/global_variables.h \
+ ../Core/Inc/global_variables.h ../Core/Inc/nextion.h \
+ ../Core/Inc/user_gpio.h ../Core/Inc/SystemTicks.h ../Core/Inc/ntc_adc.h \
+ ../Core/Inc/CSN_A2.h ../Core/Inc/ticket.h \
  ../Core/Inc/UltrasonicGenerator.h ../Core/Inc/ENDOCLEAN2000.h \
  ../Core/Inc/Medisafe.h ../Core/Inc/Medisafe_Mode_Config.h
 ../Core/Inc/main.h:
@@ -68,9 +69,10 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
+../Core/Inc/nextion_ota.h:
+../Core/Inc/main.h:
 ../Core/Inc/i2c_pressure.h:
 ../Core/Inc/rfid_wiegand.h:
-../Core/Inc/main.h:
 ../Core/Inc/fsm_reprocesadora1.h:
 ../Core/Inc/rs485_pressure_sensor.h:
 ../Core/Inc/watchdog.h:

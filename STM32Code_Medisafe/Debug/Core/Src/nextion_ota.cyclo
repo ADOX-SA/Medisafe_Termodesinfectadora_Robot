@@ -1,0 +1,8 @@
+../Core/Src/nextion_ota.c:77:13:node_reply	1
+../Core/Src/nextion_ota.c:107:13:nextion_wait_ready	4
+../Core/Src/nextion_ota.c:43:13:ota_finish	1
+../Core/Src/nextion_ota.c:212:6:nextion_ota_init	1
+../Core/Src/nextion_ota.c:226:6:nextion_ota_rx_callback	3
+../Core/Src/nextion_ota.c:234:6:nextion_ota_restart_rx	1
+../Core/Src/nextion_ota.c:239:6:nextion_ota_runcycle	47
+../Core/Src/nextion_ota.c:275:6:nextion_ota_is_active	1

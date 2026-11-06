@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "nextion_ota.h"
 #include "stdint.h"
 #include "stdbool.h"
 #include "stdio.h"
@@ -53,7 +54,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"1.31 MEDSAF\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.32 OTA\""
 
 /* USER CODE END PD */
 
@@ -138,6 +139,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	if (huart == &huart1)
+	{
+		nextion_ota_rx_callback(huart);
+		return;
+	}
+
 	/*----- INTERRUPCION DE 485 -----*/
 	if (huart == &huart2)
 	{
@@ -150,11 +157,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		Nextion_RxCallback();
 	}
 #else
-	if (huart == &huart3)	// RS232
+	if (huart == &huart3 && !nextion_ota_is_active())	// RS232
 	{
 		Nextion_RxCallback();
 	}
 #endif
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == &huart1)
+	{
+		__HAL_UART_CLEAR_OREFLAG(huart);
+		nextion_ota_restart_rx();
+	}
 }
 
 
@@ -213,6 +229,7 @@ int main(void)
 
 	Inicializar_CSN_A2();
 	Ticket_InitAll();
+	nextion_ota_init();
 
 	/* Preparo para recibir datos de Nextion. Al ejecutar Nextion_Init la
 	 * pantalla te manda tiempos de lavado y configuraciones. */
@@ -229,6 +246,9 @@ int main(void)
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
+		nextion_ota_runcycle();
+		if (!nextion_ota_is_active())
+		{
 
 		//EC2000_fsm_runcycle();
 		Medsaf_fsm_runcycle();
@@ -274,6 +294,7 @@ int main(void)
 
 		Ticket_LoopAll();          // ejecuta 1 acción por lavadora por iteración
 		Ticket_ServicePrintAll();  // imprime snapshots (cooldown 5s)
+		}
 
 		//---> Refresco del WatchDog (IWDG).
 		watchdog_refresh();
@@ -590,7 +611,7 @@ static void MX_USART1_UART_Init(void)
 
 	/* USER CODE END USART1_Init 1 */
 	huart1.Instance = USART1;
-	huart1.Init.BaudRate = 9600;
+	huart1.Init.BaudRate = 115200;
 	huart1.Init.WordLength = UART_WORDLENGTH_8B;
 	huart1.Init.StopBits = UART_STOPBITS_1;
 	huart1.Init.Parity = UART_PARITY_NONE;

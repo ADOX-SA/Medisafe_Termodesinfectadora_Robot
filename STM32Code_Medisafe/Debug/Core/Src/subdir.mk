@@ -18,6 +18,7 @@ C_SRCS += \
 ../Core/Src/global_variables.c \
 ../Core/Src/i2c_pressure.c \
 ../Core/Src/main.c \
+../Core/Src/nextion_ota.c \
 ../Core/Src/nextion.c \
 ../Core/Src/ntc_adc.c \
 ../Core/Src/onewire.c \
@@ -49,6 +50,7 @@ OBJS += \
 ./Core/Src/global_variables.o \
 ./Core/Src/i2c_pressure.o \
 ./Core/Src/main.o \
+./Core/Src/nextion_ota.o \
 ./Core/Src/nextion.o \
 ./Core/Src/ntc_adc.o \
 ./Core/Src/onewire.o \
@@ -80,6 +82,7 @@ C_DEPS += \
 ./Core/Src/global_variables.d \
 ./Core/Src/i2c_pressure.d \
 ./Core/Src/main.d \
+./Core/Src/nextion_ota.d \
 ./Core/Src/nextion.d \
 ./Core/Src/ntc_adc.d \
 ./Core/Src/onewire.d \
