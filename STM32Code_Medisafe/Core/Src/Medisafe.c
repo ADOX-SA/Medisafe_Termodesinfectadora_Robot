@@ -52,6 +52,7 @@ MEDSAF_NIVEL_BACHA_T medsaf_nivel_bacha;
 static const MEDSAF_MODE_CONFIG_T *medsaf_mode_config;
 
 uint32_t medsaf_pre_wash_tic;
+uint32_t medsaf_traba_puerta_tic;
 uint32_t medsaf_tapa_tic;
 uint32_t medsaf_drenaje_extra_tic;
 uint32_t medsaf_sendstate_tic;
@@ -398,6 +399,7 @@ static void Medsaf_fsm_finish_runcycle(void)
 
 	case MEDSAF_FINISH_FIN:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_PUERTA_ON
 		Medsaf_ticket_finalizar("STOP");
 		Medsaf_cambiar_estado(MEDSAF_END);
 		Nextion_ChangeState(REPRO1, Finalizado_NextionState);
@@ -428,7 +430,7 @@ static void Medsaf_fsm_prepare_tank_runcycle(void)
 	{
 	case MEDSAF_PREPARE_TANK_INICIO:
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		if (medsaf_nivel_bacha == MEDSAF_BACHA_EMPTY)
 		{
 			medsaf_prepare_tank_state = MEDSAF_PREPARE_TANK_FIN;
@@ -757,7 +759,7 @@ static void Medsaf_fsm_pre_wash_runcycle(void)
 			break;
 		}
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		MEDSAF_fsm_on_cold_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_pre_wash_state = MEDSAF_PRE_WASH_LLENAR_FRIA;
@@ -885,7 +887,7 @@ static void Medsaf_fsm_wash_runcycle(void)
 			break;
 		}
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		MEDSAF_fsm_on_cold_water();
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
@@ -1105,7 +1107,7 @@ static void Medsaf_fsm_rinse_runcycle(void)
 			break;
 		}
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_rinse_state = MEDSAF_RINSE_LLENAR_MEDIUM;
@@ -1221,7 +1223,7 @@ static void Medsaf_fsm_final_rinse_runcycle(void)
 	{
 	case MEDSAF_FINAL_RINSE_INICIO:
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		MEDSAF_fsm_on_hot_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_final_rinse_state = MEDSAF_FINAL_RINSE_LLENAR_MEDIUM;
@@ -1320,7 +1322,7 @@ static void Medsaf_fsm_disinfection_runcycle(void)
 			break;
 		}
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		if (medsaf_temperatura_objetivo > 0.0f)
 			MEDSAF_fsm_on_hot_water();
 		else
@@ -1456,7 +1458,7 @@ static void Medsaf_fsm_cooling_runcycle(void)
 	{
 	case MEDSAF_COOLING_INICIO:
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_fsm_on_puerta_sole();
+		MEDSAF_PUERTA_OFF
 		MEDSAF_fsm_on_cold_water();
 		medsaf_llenado_timeout_tic = MEDSAF_TIMEOUT_LLENADO;
 		medsaf_cooling_state = MEDSAF_COOLING_LLENAR_MEDIUM;
@@ -1524,6 +1526,7 @@ static void Medsaf_fsm_cooling_runcycle(void)
 	case MEDSAF_COOLING_FIN:
 		medsaf_cooling_timeout_tic = 0;
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_PUERTA_ON
 		Medsaf_ticket_finalizar("OK");
 		Medsaf_cambiar_estado(MEDSAF_END);
 		Nextion_ChangeState(REPRO1, Finalizado_NextionState);
@@ -1800,14 +1803,11 @@ void Medsaf_fsm_init(void)
 	medsaf_buzzer_substate_anterior = Medsaf_get_substate_key();
 
 	MEDSAF_fsm_off_sistema();
+	/* El sensor es valido con la traba energizada: bloquear antes de verificar. */
+	MEDSAF_PUERTA_OFF
+	medsaf_traba_puerta_tic = MEDSAF_TIME_TRABA_PUERTA;
 	Medsaf_actualizar_nivel_bacha();
-	Medsaf_control_puerta();
 	Medsaf_control_nivel_maximo();
-	if (medsaf_fsm_enable)
-	{
-		MEDSAF_fsm_on_puerta_sole();
-		Medsaf_ticket_iniciar();
-	}
 }
 
 MEDSAF_FSM_STATES_T Medsaf_fsm_get_state(void)
@@ -2036,6 +2036,10 @@ void Medsaf_fsm_runcycle(void)
 	if (!medsaf_fsm_enable && !medsaf_fsm_paused)
 		return;
 
+	/* Esperar que la traba quede mecanicamente accionada antes de leer el sensor. */
+	if (medsaf_traba_puerta_tic)
+		return;
+
 	/* La puerta se controla antes de ejecutar cualquier estado del proceso. */
 	if (!Medsaf_control_puerta())
 		return;
@@ -2049,6 +2053,9 @@ void Medsaf_fsm_runcycle(void)
 
 	if (!medsaf_fsm_enable || medsaf_fsm_paused)
 		return;
+
+	if ((medsaf_state == MEDSAF_INIT) && !medsaf_ticket_activo)
+		Medsaf_ticket_iniciar();
 
 	switch (medsaf_state)
 	{
@@ -2092,6 +2099,7 @@ void Medsaf_fsm_runcycle(void)
 
 	case MEDSAF_END:
 		MEDSAF_fsm_off_sistema();
+		MEDSAF_PUERTA_ON
 		break;
 
 	default:

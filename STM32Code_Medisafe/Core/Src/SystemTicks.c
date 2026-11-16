@@ -80,6 +80,9 @@ void SystemTicks_1ms(){
 	if (medsaf_pre_wash_tic > 0)
 		medsaf_pre_wash_tic--;
 
+	if (medsaf_traba_puerta_tic > 0)
+		medsaf_traba_puerta_tic--;
+
 	if (medsaf_tapa_tic > 0)
 		medsaf_tapa_tic--;
 

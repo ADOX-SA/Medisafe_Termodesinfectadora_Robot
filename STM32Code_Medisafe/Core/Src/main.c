@@ -44,6 +44,7 @@
 #include "UltrasonicGenerator.h"
 #include "ENDOCLEAN2000.h"
 #include "Medisafe.h"
+#include "Medisafe_Gpio_Config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,7 +55,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"1.32 OTA\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.33 OTA\""
 
 /* USER CODE END PD */
 
@@ -221,6 +222,9 @@ int main(void)
 	user_gpio_init();
 	RS485_Init();
 	RelayModule_Init(REPRO1);
+	/* Al encender la maquina: todas las salidas apagadas y puerta desbloqueada. */
+	MEDSAF_fsm_off_sistema();
+	MEDSAF_PUERTA_ON
 	Rfid_Wiegand_Init();
 	UltSon_Init();
 

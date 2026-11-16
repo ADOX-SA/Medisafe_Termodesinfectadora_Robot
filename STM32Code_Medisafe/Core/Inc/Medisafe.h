@@ -11,6 +11,9 @@
 #include <stdbool.h>
 #include "Medisafe_Mode_Config.h"
 
+/* Tiempo para que la traba accione antes de validar el sensor de puerta. */
+#define MEDSAF_TIME_TRABA_PUERTA 1000
+
 /* Estados principales de la FSM Medisafe. */
 typedef enum
 {
@@ -156,6 +159,7 @@ extern bool medsaf_buzzer_transiciones_enable;
 
 /* Temporizadores descendentes atendidos cada 1 ms por SystemTicks_1ms(). */
 extern uint32_t medsaf_pre_wash_tic;
+extern uint32_t medsaf_traba_puerta_tic;
 extern uint32_t medsaf_tapa_tic;
 extern uint32_t medsaf_drenaje_extra_tic;
 extern uint32_t medsaf_sendstate_tic;
