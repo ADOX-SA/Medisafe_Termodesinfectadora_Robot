@@ -629,8 +629,9 @@ static uint8_t Medsaf_control_puerta(void)
 			Medsaf_fsm_pause();
 			medsaf_error_puerta = 1;
 			Medsaf_buzzer_error_init();
-			Nextion_Error(REPRO1, "Tapa abierta");
+			/* Cambiar primero a Error para que el timer de Pausado no pise el texto. */
 			Nextion_ChangeState(REPRO1, Error_NextionState);
+			Nextion_Error(REPRO1, "Tapa abierta");
 			Ticket_EnqEventRtc(REPRO1, "ERROR: PUERTA ABIERTA");
 		}
 		return 0;
