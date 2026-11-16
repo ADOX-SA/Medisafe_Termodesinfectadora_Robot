@@ -102,6 +102,7 @@ static uint32_t medsaf_cooling_timeout_tic_pausa;
 static uint8_t medsaf_ticket_activo;
 static uint8_t medsaf_pausa_por_puerta;
 static uint8_t medsaf_puerta_cierre_confirmando;
+static uint8_t medsaf_reanudacion_manual_pendiente;
 static char medsaf_ticket_proceso[16];
 static char medsaf_ticket_falla[30];
 static uint32_t medsaf_ticket_instancia_inicio_tic;
@@ -650,10 +651,10 @@ static uint8_t Medsaf_control_puerta(void)
 		medsaf_puerta_cerrada_tic = 0;
 		medsaf_puerta_cierre_confirmando = 0;
 		medsaf_error_puerta = 0;
-		medsaf_pausa_por_puerta = 0;
 		Medsaf_buzzer_off();
 		enqueue_nextion_command("data.L1_mensaje.txt=\"\"");
 		Medsaf_fsm_continue();
+		medsaf_pausa_por_puerta = 0;
 		return 1;
 	}
 
@@ -1811,6 +1812,7 @@ void Medsaf_fsm_init(void)
 	medsaf_error_puerta = 0;
 	medsaf_pausa_por_puerta = 0;
 	medsaf_puerta_cierre_confirmando = 0;
+	medsaf_reanudacion_manual_pendiente = 0;
 	medsaf_puerta_cerrada_tic = 0;
 	medsaf_error_nivel_maximo = 0;
 	medsaf_error_nivel_bacha = 0;
@@ -1938,22 +1940,36 @@ void Medsaf_fsm_pause(void)
 	MEDSAF_fsm_off_sistema();
 	fsm_off_buzzer();
 	if (!medsaf_pausa_por_puerta)
+	{
+		MEDSAF_PUERTA_ON
 		Nextion_ChangeState(REPRO1, Pausado_NextionState);
+	}
 }
 
 void Medsaf_fsm_continue(void)
 {
 	uint8_t medsaf_i;
 
-	if (!medsaf_fsm_paused || medsaf_error_puerta ||
+	if (!medsaf_fsm_paused ||
 		medsaf_error_nivel_maximo || medsaf_error_nivel_bacha ||
 		medsaf_error_llenado_timeout || medsaf_error_drenaje_timeout ||
 		medsaf_error_calefaccion_timeout || medsaf_error_sobretemperatura ||
 		medsaf_error_calefactor ||
 		medsaf_error_termocuplas ||
 		medsaf_error_temperatura ||
-		!MEDSAF_SENSOR_PUERTA ||
 		MEDSAF_NIVEL_BACHA_MAXIMO)
+		return;
+
+	/* Al reanudar manualmente, bloquear primero y esperar que actue la traba. */
+	if (!medsaf_pausa_por_puerta && !medsaf_reanudacion_manual_pendiente)
+	{
+		MEDSAF_PUERTA_OFF
+		medsaf_traba_puerta_tic = MEDSAF_TIME_TRABA_PUERTA;
+		medsaf_reanudacion_manual_pendiente = 1;
+		return;
+	}
+
+	if (medsaf_error_puerta || !MEDSAF_SENSOR_PUERTA)
 		return;
 
 	for (medsaf_i = 0; medsaf_i < 16; medsaf_i++)
@@ -1977,6 +1993,7 @@ void Medsaf_fsm_continue(void)
 	medsaf_disinfection_tic = medsaf_disinfection_tic_pausa;
 	medsaf_cooling_tic = medsaf_cooling_tic_pausa;
 	medsaf_cooling_timeout_tic = medsaf_cooling_timeout_tic_pausa;
+	medsaf_reanudacion_manual_pendiente = 0;
 	medsaf_fsm_paused = 0;
 	medsaf_fsm_enable = 1;
 	Nextion_ChangeState(REPRO1, Lavando_NextionState);
@@ -2074,7 +2091,8 @@ void Medsaf_fsm_runcycle(void)
 		return;
 
 	/* Una pausa manual no debe reanudarse automaticamente por la puerta. */
-	if (medsaf_fsm_paused && !medsaf_pausa_por_puerta)
+	if (medsaf_fsm_paused && !medsaf_pausa_por_puerta &&
+		!medsaf_reanudacion_manual_pendiente)
 		return;
 
 	/* Esperar que la traba quede mecanicamente accionada antes de leer el sensor. */
@@ -2091,6 +2109,12 @@ void Medsaf_fsm_runcycle(void)
 
 	if (!Medsaf_control_nivel_invalido())
 		return;
+
+	if (medsaf_reanudacion_manual_pendiente && medsaf_fsm_paused)
+	{
+		Medsaf_fsm_continue();
+		return;
+	}
 
 	if (!medsaf_fsm_enable || medsaf_fsm_paused)
 		return;
