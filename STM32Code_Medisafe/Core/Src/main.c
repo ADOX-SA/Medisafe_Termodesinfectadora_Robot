@@ -55,7 +55,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"1.34 OTA\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.35 OTA\""
 
 /* USER CODE END PD */
 

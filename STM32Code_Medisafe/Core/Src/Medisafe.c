@@ -623,11 +623,12 @@ static uint8_t Medsaf_control_puerta(void)
 		medsaf_puerta_cierre_confirmando = 0;
 		if (!medsaf_error_puerta)
 		{
+			/* Evita que la Nextion procese primero el mensaje de pausa manual. */
+			medsaf_pausa_por_puerta = 1;
 			Medsaf_fsm_pause();
 			medsaf_error_puerta = 1;
-			medsaf_pausa_por_puerta = 1;
 			Medsaf_buzzer_error_init();
-			Nextion_Error(REPRO1, "Puerta abierta");
+			Nextion_Error(REPRO1, "Tapa abierta");
 			Nextion_ChangeState(REPRO1, Error_NextionState);
 			Ticket_EnqEventRtc(REPRO1, "ERROR: PUERTA ABIERTA");
 		}
@@ -1936,7 +1937,8 @@ void Medsaf_fsm_pause(void)
 	medsaf_fsm_paused = 1;
 	MEDSAF_fsm_off_sistema();
 	fsm_off_buzzer();
-	Nextion_ChangeState(REPRO1, Pausado_NextionState);
+	if (!medsaf_pausa_por_puerta)
+		Nextion_ChangeState(REPRO1, Pausado_NextionState);
 }
 
 void Medsaf_fsm_continue(void)
