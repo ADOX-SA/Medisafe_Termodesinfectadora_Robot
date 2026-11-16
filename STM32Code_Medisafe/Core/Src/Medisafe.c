@@ -53,6 +53,7 @@ static const MEDSAF_MODE_CONFIG_T *medsaf_mode_config;
 
 uint32_t medsaf_pre_wash_tic;
 uint32_t medsaf_traba_puerta_tic;
+uint32_t medsaf_puerta_cerrada_tic;
 uint32_t medsaf_tapa_tic;
 uint32_t medsaf_drenaje_extra_tic;
 uint32_t medsaf_sendstate_tic;
@@ -99,6 +100,8 @@ static uint32_t medsaf_disinfection_tic_pausa;
 static uint32_t medsaf_cooling_tic_pausa;
 static uint32_t medsaf_cooling_timeout_tic_pausa;
 static uint8_t medsaf_ticket_activo;
+static uint8_t medsaf_pausa_por_puerta;
+static uint8_t medsaf_puerta_cierre_confirmando;
 static char medsaf_ticket_proceso[16];
 static char medsaf_ticket_falla[30];
 static uint32_t medsaf_ticket_instancia_inicio_tic;
@@ -616,12 +619,41 @@ static uint8_t Medsaf_control_puerta(void)
 {
 	if (!MEDSAF_SENSOR_PUERTA)
 	{
+		medsaf_puerta_cerrada_tic = 0;
+		medsaf_puerta_cierre_confirmando = 0;
 		if (!medsaf_error_puerta)
 		{
+			Medsaf_fsm_pause();
 			medsaf_error_puerta = 1;
-			Medsaf_detener_por_error("Puerta abierta");
+			medsaf_pausa_por_puerta = 1;
+			Medsaf_buzzer_error_init();
+			Nextion_Error(REPRO1, "Puerta abierta");
+			Nextion_ChangeState(REPRO1, Error_NextionState);
+			Ticket_EnqEventRtc(REPRO1, "ERROR: PUERTA ABIERTA");
 		}
 		return 0;
+	}
+
+	if (medsaf_error_puerta && medsaf_pausa_por_puerta)
+	{
+		if (!medsaf_puerta_cierre_confirmando)
+		{
+			medsaf_puerta_cierre_confirmando = 1;
+			medsaf_puerta_cerrada_tic = MEDSAF_TIME_PUERTA_CERRADA_ESTABLE;
+			return 0;
+		}
+
+		if (medsaf_puerta_cerrada_tic)
+			return 0;
+
+		medsaf_puerta_cerrada_tic = 0;
+		medsaf_puerta_cierre_confirmando = 0;
+		medsaf_error_puerta = 0;
+		medsaf_pausa_por_puerta = 0;
+		Medsaf_buzzer_off();
+		enqueue_nextion_command("data.L1_mensaje.txt=\"\"");
+		Medsaf_fsm_continue();
+		return 1;
 	}
 
 	return 1;
@@ -1776,6 +1808,9 @@ void Medsaf_fsm_init(void)
 	medsaf_fsm_enable = 1;
 	medsaf_fsm_paused = 0;
 	medsaf_error_puerta = 0;
+	medsaf_pausa_por_puerta = 0;
+	medsaf_puerta_cierre_confirmando = 0;
+	medsaf_puerta_cerrada_tic = 0;
 	medsaf_error_nivel_maximo = 0;
 	medsaf_error_nivel_bacha = 0;
 	medsaf_error_llenado_timeout = 0;
@@ -2034,6 +2069,10 @@ void Medsaf_fsm_runcycle(void)
 
 	/* En END o luego de un error solo queda activo el servicio del buzzer. */
 	if (!medsaf_fsm_enable && !medsaf_fsm_paused)
+		return;
+
+	/* Una pausa manual no debe reanudarse automaticamente por la puerta. */
+	if (medsaf_fsm_paused && !medsaf_pausa_por_puerta)
 		return;
 
 	/* Esperar que la traba quede mecanicamente accionada antes de leer el sensor. */

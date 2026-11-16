@@ -83,6 +83,9 @@ void SystemTicks_1ms(){
 	if (medsaf_traba_puerta_tic > 0)
 		medsaf_traba_puerta_tic--;
 
+	if (medsaf_puerta_cerrada_tic > 0)
+		medsaf_puerta_cerrada_tic--;
+
 	if (medsaf_tapa_tic > 0)
 		medsaf_tapa_tic--;
 
