@@ -143,6 +143,25 @@ static void Medsaf_ticket_finalizar(const char *medsaf_resultado);
 static void Medsaf_ticket_cerrar_instancia_actual(void);
 static void Medsaf_ticket_encolar_duraciones(void);
 
+static uint8_t Medsaf_puerta_temperatura_segura(void)
+{
+	/* Para seguridad se toma el sensor mas caliente, no el promedio. */
+	return ((L1_realTemp <= MEDSAF_TEMP_COOLING) &&
+			(L2_realTemp <= MEDSAF_TEMP_COOLING));
+}
+
+static void Medsaf_puerta_desbloquear_si_segura(void)
+{
+	if (Medsaf_puerta_temperatura_segura())
+	{
+		MEDSAF_PUERTA_ON
+	}
+	else
+	{
+		MEDSAF_PUERTA_OFF
+	}
+}
+
 static void Medsaf_calefactor_monitor_stop(void)
 {
 	medsaf_calefactor_monitor.activo = 0;
@@ -403,7 +422,7 @@ static void Medsaf_fsm_finish_runcycle(void)
 
 	case MEDSAF_FINISH_FIN:
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_PUERTA_ON
+		Medsaf_puerta_desbloquear_si_segura();
 		Medsaf_ticket_finalizar("STOP");
 		Medsaf_cambiar_estado(MEDSAF_END);
 		Nextion_ChangeState(REPRO1, Finalizado_NextionState);
@@ -1560,7 +1579,7 @@ static void Medsaf_fsm_cooling_runcycle(void)
 	case MEDSAF_COOLING_FIN:
 		medsaf_cooling_timeout_tic = 0;
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_PUERTA_ON
+		Medsaf_puerta_desbloquear_si_segura();
 		Medsaf_ticket_finalizar("OK");
 		Medsaf_cambiar_estado(MEDSAF_END);
 		Nextion_ChangeState(REPRO1, Finalizado_NextionState);
@@ -1941,7 +1960,7 @@ void Medsaf_fsm_pause(void)
 	fsm_off_buzzer();
 	if (!medsaf_pausa_por_puerta)
 	{
-		MEDSAF_PUERTA_ON
+		Medsaf_puerta_desbloquear_si_segura();
 		Nextion_ChangeState(REPRO1, Pausado_NextionState);
 	}
 }
@@ -2164,7 +2183,7 @@ void Medsaf_fsm_runcycle(void)
 
 	case MEDSAF_END:
 		MEDSAF_fsm_off_sistema();
-		MEDSAF_PUERTA_ON
+		Medsaf_puerta_desbloquear_si_segura();
 		break;
 
 	default:
@@ -2173,4 +2192,23 @@ void Medsaf_fsm_runcycle(void)
 	}
 
 	Medsaf_buzzer_controlar_transicion();
+}
+
+void Medsaf_puerta_servicio_termico(void)
+{
+	/* El limite termico tiene prioridad absoluta sobre cualquier estado. */
+	if (!Medsaf_puerta_temperatura_segura())
+	{
+		MEDSAF_PUERTA_OFF
+		return;
+	}
+
+	/* En reposo, al finalizar o durante una pausa manual se puede desbloquear. */
+	if ((!medsaf_fsm_enable && !medsaf_fsm_paused &&
+		 ((medsaf_state == MEDSAF_INIT) || (medsaf_state == MEDSAF_END))) ||
+		(medsaf_fsm_paused && !medsaf_pausa_por_puerta &&
+		 !medsaf_reanudacion_manual_pendiente))
+	{
+		MEDSAF_PUERTA_ON
+	}
 }

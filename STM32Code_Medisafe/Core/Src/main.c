@@ -55,7 +55,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define FIRMWARE_VER "data.firm_ver.txt=\"1.38 OTA\""
+#define FIRMWARE_VER "data.firm_ver.txt=\"1.39 OTA\""
 
 /* USER CODE END PD */
 
@@ -222,9 +222,8 @@ int main(void)
 	user_gpio_init();
 	RS485_Init();
 	RelayModule_Init(REPRO1);
-	/* Al encender la maquina: todas las salidas apagadas y puerta desbloqueada. */
+	/* Al encender la maquina: todo apagado y puerta bloqueada hasta medir temperatura. */
 	MEDSAF_fsm_off_sistema();
-	MEDSAF_PUERTA_ON
 	Rfid_Wiegand_Init();
 	UltSon_Init();
 
@@ -270,6 +269,7 @@ int main(void)
 
 		//---> Sensores de temperatura NTC
 		NTC_ADC_Loop();
+		Medsaf_puerta_servicio_termico();
 
 		//---> Procesar RS485.
 		RS485_Loop();

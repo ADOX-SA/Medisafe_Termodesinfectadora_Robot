@@ -184,6 +184,7 @@ extern uint32_t medsaf_buzzer_tic;
 
 void Medsaf_fsm_init(void);
 void Medsaf_fsm_runcycle(void);
+void Medsaf_puerta_servicio_termico(void);
 void Medsaf_fsm_pause(void);
 void Medsaf_fsm_continue(void);
 void Medsaf_fsm_finish(void);
